@@ -1,6 +1,6 @@
 import { db } from "~/db/db";
 import { useSearchParams } from "react-router";
-import type { Route } from "../+types/root";
+import type { Route } from "./+types/organization.$id";
 
 interface Organization {
   id: number;
@@ -9,13 +9,7 @@ interface Organization {
   updatedAt: Date;
 }
 
-interface LoaderArgs extends Route.LoaderArgs {
-  params: {
-    id: string;
-  } & Route.LoaderArgs['params'];
-}
-
-export async function loader({ params }: LoaderArgs) {
+export async function loader({ params }: Route.LoaderArgs) {
   const org = await db.getOrganization(Number(params.id));
   if (!org) {
     throw new Response("Not Found", { status: 404 });

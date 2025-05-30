@@ -13,11 +13,89 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Organization {
-  id        Int      @id @default(autoincrement())
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+abstract model BaseModel {
+  // META
+  created_at DateTime @default(now())
+  id         String   @id @default(cuid())
+  is_enabled Boolean  @default(true)
+  is_public  Boolean  @default(false)
+  rank       Int      @default(0)
+  selector   String?  @unique
+  updated_at DateTime @updatedAt
+
+  @@allow("all", auth().role == "dev")
+  @@allow("read", is_public == true)
+}
+
+model Organization extends BaseModel {
+  name                   String
+  organizations_to_users OrganizationToUser[]
+
 
   @@allow('all', true)
+}
+
+// User
+// users
+
+model User extends BaseModel {
+  // META
+  // MISC
+  role                   String
+  // RELATIONS - SELF
+  // RELATIONS - ONE
+  // RELATIONS - MANY
+  organizations_to_users OrganizationToUser[]
+
+  @@index([created_at])
+  @@index([rank])
+  @@index([updated_at])
+
+  @@map("users")
+}
+
+
+// Opportunity
+// opportunities
+
+model Opportunity extends BaseModel {
+  // META
+  // MISC
+  // RELATIONS - SELF
+  // RELATIONS - ONE
+  // RELATIONS - MANY
+
+
+  @@index([created_at])
+  @@index([rank])
+  @@index([updated_at])
+
+  @@map("opportunities")
+}
+
+// Organization
+// organizations
+// organization
+// User
+// users
+// user
+
+model OrganizationToUser extends BaseModel {
+  // META
+  // MISC
+  // RELATIONS - SELF
+  // RELATIONS - ONE
+  organization    Organization @relation(fields: [organization_id], references: [id])
+  organization_id String
+  user            User         @relation(fields: [user_id], references: [id])
+  user_id         String
+  // RELATIONS - MANY
+
+  @@unique([organization_id, user_id])
+
+  @@index([created_at])
+  @@index([rank])
+  @@index([updated_at])
+
+  @@map("organizations_to_users")
 }
