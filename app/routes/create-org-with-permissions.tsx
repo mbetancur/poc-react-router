@@ -1,24 +1,50 @@
 import { db } from "~/db/db";
-import type { Route } from "./+types/create-organization";
+import type { Route } from "./+types/create-org-with-permissions";
 import { Form, useFetcher } from "react-router";
-import { RoleSchema } from "generated/zen/zod/enums";
+import { Validator } from "jsonschema";
+import { useState } from "react";
+import { resourceLimits } from "worker_threads";
+
+export async function loader() {
+  // const permissions = await db.getOrganizationPermissions();
+  const permissions = {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "id": "https://example.com/product.schema.json",
+    "type": "object",
+    "properties": {
+      "restrictedWords": {
+        "pattern": ".*mango.*",
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "List of restricted words that should be filtered"
+      }
+    },
+    "required": ["restrictedWords"]
+  }
+
+  return permissions;
+}
 
 export async function action({ request }: Route.ActionArgs) {
   const formData = await request.formData();
   const name = formData.get("name");
   const org = await db.createOrganization(name as string);
-  console.log("ORG1234", org)
-  // const orgToUser = await db.getOrganizationToUser()
-  // const orgToUser = await db.createOrganizationToUser(org.id, "1", Role.ADMIN)
-  // Move next line to create org DB fn
-  // const orgToUser = await db.createOrganizationToUser(org.id, "1", RoleSchema.enum.ADMIN) 
   return org;
 }
 
-export default function CreateOrganization({ actionData }: Route.ComponentProps) {
+export default function CreateOrganization({ actionData, loaderData }: Route.ComponentProps) {
+  const [dataToValidate, setDataToValidate] = useState("mango2");
+  const permissions = loaderData ?? [];
+  console.log("PERMISSIONS", permissions)
+  const validator = new Validator();
+  const validationResult = validator.validate(dataToValidate, permissions);
+  console.log("VALIDATION RESULT", validationResult)
+  console.log("VALIDATION RESULT: VALID", validationResult.valid)
+
   const fetcher = useFetcher();
   const isSubmitting = fetcher.state === "submitting";
-
   return (
     <>
       <h1 className="text-4xl font-bold mb-4">Create Organization</h1>
@@ -32,6 +58,7 @@ export default function CreateOrganization({ actionData }: Route.ComponentProps)
             className="border border-blue-300 p-2 rounded-md"
             type="text"
             name="name"
+            onChange={(e) => setDataToValidate(e.target.value)}
             disabled={isSubmitting}
           />
           <button

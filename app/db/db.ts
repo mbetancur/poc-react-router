@@ -37,5 +37,15 @@ export const db = {
     return enhancedPrisma.organizationToUser.create({
       data: { role_to_org, organization: { connect: { id: organizationId } }, user: { connect: { id: userId } } }
     })
+  },
+
+  async getOrganizationPermissions() {
+    return enhancedPrisma.organizationPermission.findMany()
+  },
+
+  async createOrganizationPermission(organizationId: string, permissions: any) {
+    return enhancedPrisma.organizationPermission.create({
+      data: { organization: { connect: { id: organizationId } }, permissions }
+    })
   }
 };

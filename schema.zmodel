@@ -57,11 +57,13 @@ enum Role {
 }
 
 model Organization extends BaseModel {
-  name                        String
-  organizations_to_users      OrganizationToUser[]
-  opportunities               Opportunity[]
+  name                     String
+  organizations_to_users   OrganizationToUser[]
+  opportunities            Opportunity[]
+  // organization_permissions OrganizationPermission?
 
   // @@allow("create", auth().role == "admin")
+  @@map("organizations")
 
   @@allow('all', true)
 }
@@ -91,5 +93,14 @@ model OrganizationToUser extends BaseModel {
 
   @@map("organizations_to_users")
 
+  @@allow("all", auth().role == ADMIN || auth().role == DEV)
+}
+
+model OrganizationPermission extends BaseModel {
+  // organization    Organization @relation(fields: [organization_id], references: [id])
+  // organization_id String       @unique
+  permissions     Json
+
+  @@map("organization_permissions")
   @@allow("all", auth().role == ADMIN || auth().role == DEV)
 }
