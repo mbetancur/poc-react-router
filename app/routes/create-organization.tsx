@@ -1,12 +1,18 @@
 import { db } from "~/db/db";
 import type { Route } from "./+types/create-organization";
 import { Form, useFetcher } from "react-router";
+import { RoleSchema } from "generated/zen/zod/enums";
 
 export async function action({ request }: Route.ActionArgs) {
   const formData = await request.formData();
   const name = formData.get("name");
-  const orgs = await db.createOrganization(name as string);
-  return orgs;
+  const org = await db.createOrganization(name as string);
+  console.log("ORG1234", org)
+  // const orgToUser = await db.getOrganizationToUser()
+  // const orgToUser = await db.createOrganizationToUser(org.id, "1", Role.ADMIN)
+  const orgToUser = await db.createOrganizationToUser(org.id, "1", RoleSchema.enum.ADMIN) // Move to create org DB fn
+  console.log(orgToUser)
+  return org;
 }
 
 export default function CreateOrganization({ actionData }: Route.ComponentProps) {

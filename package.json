@@ -6,7 +6,10 @@
     "build": "react-router build",
     "dev": "react-router dev",
     "start": "react-router-serve ./build/server/index.js",
-    "typecheck": "react-router typegen && tsc"
+    "typecheck": "react-router typegen && tsc",
+    "generate": "zenstack generate",
+    "prisma:db-push": "npm run generate && npx prisma db push",
+    "postinstall": "npm run generate"
   },
   "dependencies": {
     "@prisma/client": "^6.8.2",
@@ -33,5 +36,8 @@
     "vite": "^6.3.3",
     "vite-tsconfig-paths": "^5.1.4",
     "zenstack": "2.15.0"
+  },
+  "prisma": {
+    "schema": "./generated/prisma/schema.prisma"
   }
 }

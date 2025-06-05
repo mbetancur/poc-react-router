@@ -10,7 +10,24 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = env("DATABASE_URL")
+  url = "file:./../../dev.db"
+}
+
+plugin prisma {
+  provider = "@core/prisma"
+  output = "./generated/prisma/schema.prisma"
+  format = true
+}
+
+plugin zod {
+  provider = "@core/zod"
+  output = "./generated/zen/zod"
+  compile = false
+}
+
+plugin enhancer {
+  provider = '@core/enhancer'
+  generatePermissionChecker = true
 }
 
 abstract model BaseModel {
@@ -20,82 +37,59 @@ abstract model BaseModel {
   is_enabled Boolean  @default(true)
   is_public  Boolean  @default(false)
   rank       Int      @default(0)
-  selector   String?  @unique
   updated_at DateTime @updatedAt
 
-  @@allow("all", auth().role == "dev")
-  @@allow("read", is_public == true)
+  @@allow("all", auth().role == ADMIN || auth().role == DEV)
+  // @@allow("read", is_public == true)
 }
-
-model Organization extends BaseModel {
-  name                   String
-  organizations_to_users OrganizationToUser[]
-
-
-  @@allow('all', true)
-}
-
-// User
-// users
 
 model User extends BaseModel {
-  // META
-  // MISC
-  role                   String
-  // RELATIONS - SELF
-  // RELATIONS - ONE
-  // RELATIONS - MANY
+  role                   Role
   organizations_to_users OrganizationToUser[]
-
-  @@index([created_at])
-  @@index([rank])
-  @@index([updated_at])
 
   @@map("users")
 }
 
-
-// Opportunity
-// opportunities
-
-model Opportunity extends BaseModel {
-  // META
-  // MISC
-  // RELATIONS - SELF
-  // RELATIONS - ONE
-  // RELATIONS - MANY
-
-
-  @@index([created_at])
-  @@index([rank])
-  @@index([updated_at])
-
-  @@map("opportunities")
+enum Role {
+  ADMIN
+  DEV
+  USER
 }
 
-// Organization
-// organizations
-// organization
-// User
-// users
-// user
+model Organization extends BaseModel {
+  name                        String
+  organizations_to_users      OrganizationToUser[]
+  opportunities               Opportunity[]
+
+  // @@allow("create", auth().role == "admin")
+
+  @@allow('all', true)
+}
+
+model Opportunity extends BaseModel {
+  name            String
+  organization    Organization @relation(fields: [organization_id], references: [id])// One-to-many relationship with Org
+  organization_id String
+
+  @@index([organization_id])
+
+  @@map("opportunities")
+
+  @@allow("create", auth().role == ADMIN || auth().role == DEV)
+  @@allow("create", organization.organizations_to_users?[role_to_org == ADMIN])
+  @@allow("update,delete,read", auth().role == ADMIN || auth().role == DEV)
+}
 
 model OrganizationToUser extends BaseModel {
-  // META
-  // MISC
-  // RELATIONS - SELF
-  // RELATIONS - ONE
+  role_to_org     Role         @default(ADMIN)
   organization    Organization @relation(fields: [organization_id], references: [id])
   organization_id String
   user            User         @relation(fields: [user_id], references: [id])
   user_id         String
-  // RELATIONS - MANY
 
   @@unique([organization_id, user_id])
 
-  @@index([created_at])
-  @@index([rank])
-  @@index([updated_at])
-
   @@map("organizations_to_users")
+
+  @@allow("all", auth().role == ADMIN || auth().role == DEV)
 }

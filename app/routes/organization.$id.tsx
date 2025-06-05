@@ -3,14 +3,14 @@ import { useSearchParams } from "react-router";
 import type { Route } from "./+types/organization.$id";
 
 interface Organization {
-  id: number;
+  id: string;
   name: string;
-  createdAt: Date;
-  updatedAt: Date;
+  created_at: Date;
+  updated_at: Date;
 }
 
 export async function loader({ params }: Route.LoaderArgs) {
-  const org = await db.getOrganization(Number(params.id));
+  const org = await db.getOrganization(params.id);
   if (!org) {
     throw new Response("Not Found", { status: 404 });
   }

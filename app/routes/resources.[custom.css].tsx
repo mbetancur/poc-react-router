@@ -10,9 +10,6 @@ export async function loader({ }: Route.LoaderArgs) {
   margin: 0 auto;
   padding: 0 20px;
 }
-  body {
-   background-color: red !important;
-  }
 
 .title {
   font-size: 2rem;
