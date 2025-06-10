@@ -7,7 +7,6 @@ export async function action({ request }: Route.ActionArgs) {
   const formData = await request.formData();
   const name = formData.get("name");
   const org = await db.createOrganization(name as string);
-  console.log("ORG1234", org)
   // const orgToUser = await db.getOrganizationToUser()
   // const orgToUser = await db.createOrganizationToUser(org.id, "1", Role.ADMIN)
   // Move next line to create org DB fn

@@ -13,13 +13,6 @@ export async function loader({ }: Route.LoaderArgs) {
   return orgs;
 }
 
-export async function action({ request }: Route.ActionArgs) {
-  const formData = await request.formData();
-  const name = formData.get("name");
-  const org = await db.createOrganization(name as string);
-  return org;
-}
-
 export default function Organizations({ loaderData }: Route.ComponentProps) {
   const orgs = Array.isArray(loaderData) ? (loaderData as Organization[]) : [];
   return (

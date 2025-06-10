@@ -30,6 +30,12 @@ plugin enhancer {
   generatePermissionChecker = true
 }
 
+abstract model BarkModel extends BaseModel {
+  path     String @unique
+  depth    Int
+  numchild Int    @default(0)
+}
+
 abstract model BaseModel {
   // META
   created_at DateTime @default(now())
@@ -37,7 +43,7 @@ abstract model BaseModel {
   is_enabled Boolean  @default(true)
   is_public  Boolean  @default(false)
   rank       Int      @default(0)
-  updated_at DateTime @updatedAt
+  updated_at DateTime @default(now()) @updatedAt
 
   @@allow("all", auth().role == ADMIN || auth().role == DEV)
   // @@allow("read", is_public == true)
@@ -56,11 +62,30 @@ enum Role {
   USER
 }
 
+// prisma/schema.prisma
+model node extends BarkModel {
+  // Extension's internal fields
+  // id       Int    @id @default(autoincrement())
+  // path     String @unique
+  // depth    Int
+  // numchild Int    @default(0)
+    
+  // Your fields go here...
+  name String
+
+  @@index([path])
+}
+
 model Organization extends BaseModel {
-  name                     String
-  organizations_to_users   OrganizationToUser[]
-  opportunities            Opportunity[]
+  name                   String
+  organizations_to_users OrganizationToUser[]
+  opportunities          Opportunity[]
   // organization_permissions OrganizationPermission?
+  parent_organization    Organization?        @relation("OrganizationHierarchy", fields: [parent_id], references: [id])
+  parent_id              String?
+  child_organizations    Organization[]       @relation("OrganizationHierarchy")
+
+  @@index([parent_id])
 
   // @@allow("create", auth().role == "admin")
   @@map("organizations")
@@ -99,7 +124,7 @@ model OrganizationToUser extends BaseModel {
 model OrganizationPermission extends BaseModel {
   // organization    Organization @relation(fields: [organization_id], references: [id])
   // organization_id String       @unique
-  permissions     Json
+  permissions Json
 
   @@map("organization_permissions")
   @@allow("all", auth().role == ADMIN || auth().role == DEV)

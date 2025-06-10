@@ -43,9 +43,36 @@ export const db = {
     return enhancedPrisma.organizationPermission.findMany()
   },
 
-  async createOrganizationPermission(organizationId: string, permissions: any) {
-    return enhancedPrisma.organizationPermission.create({
-      data: { organization: { connect: { id: organizationId } }, permissions }
-    })
+  // async createOrganizationPermission(organizationId: string, permissions: any) {
+  //   return enhancedPrisma.organizationPermission.create({
+  //     data: { organization: { connect: { id: organizationId } }, permissions }
+  //   })
+  // }
+
+  async createParentOrganization(name: string) {
+    return enhancedPrisma.organization.create({
+      data: { name }
+    });
+  },
+
+  async createChildOrganization(name: string, parentId: string) {
+    return enhancedPrisma.organization.create({
+      data: { name, parent_id: parentId }
+    });
+  },
+
+  async getOrganizationWithChildren(id: string) {
+    return enhancedPrisma.organization.findUnique({
+      where: { id },
+      include: { child_organizations: true }
+    });
+  },
+
+  async getOrganizationWithParent(id: string) {
+    return enhancedPrisma.organization.findUnique({
+      where: { id },
+      include: { parent_organization: true }
+    });
   }
+
 };
