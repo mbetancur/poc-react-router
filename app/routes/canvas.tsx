@@ -6,10 +6,10 @@ export default function Canvas() {
   const [numberShape, setNumberShape] = useState(0)
   return (
     <>
-      <Stage width={1200} height={1200}>
+      <Stage width={1200} height={700}>
         <InteractiveBuilding numberShape={numberShape} />
       </Stage>
-      <button onClick={() => {
+      <button style={{ padding: '12px', backgroundColor: 'blue' }} onClick={() => {
         setNumberShape(numberShape + 1)
       }}>
         Create shape
