@@ -16,7 +16,8 @@ export default function CanvasShapes() {
     const pos = e?.target?.getStage()?.getPointerPosition();
 
     if (pos && !isShapeClosed) {
-      if (points.length >= MIN_POINTS_FOR_SNAP) {
+      // TODO consider merging state of points here and shapeDrawer (flat map of points)
+      if (points.length >= (MIN_POINTS_FOR_SNAP / 2)) {
         const initialPoint = points[0];
         const distance = Math.sqrt(
           Math.pow(pos.x - initialPoint.x, 2) +
@@ -48,21 +49,28 @@ export default function CanvasShapes() {
     }
   };
 
-  const handlePointMove = (index: number, newX: number, newY: number) => {
+  const handlePointMove = (i: number, newX: number, newY: number) => {
     setPoints(prev => {
       const newPoints = [...prev];
-      newPoints[index] = { x: newX, y: newY };
+      newPoints[i] = { x: newX, y: newY };
 
       if (isShapeClosed && prev.length > 0) {
-        if (index === 0) {
+        if (i === 0) {
           newPoints[newPoints.length - 1] = { x: newX, y: newY };
-        } else if (index === newPoints.length - 1) {
+        } else if (i === newPoints.length - 1) {
           newPoints[0] = { x: newX, y: newY };
         }
       }
 
       return newPoints;
     });
+  };
+
+  const handleShapeSelect = () => {
+    setIsSelected(true);
+    if (transformerRef && transformerRef.current) {
+      transformerRef.current?.nodes([shapeRef.current as Konva.Node]);
+    }
   };
 
   const clearCurrent = () => {
@@ -86,7 +94,6 @@ export default function CanvasShapes() {
       >
         <Layer>
           <ShapeDrawer
-            // tension={0.5}
             ref={shapeRef}
             points={points.flatMap(point => [point.x, point.y])}
             currentMousePos={currentMousePos}
@@ -94,12 +101,8 @@ export default function CanvasShapes() {
             isShapeClosed={isShapeClosed}
             showCircles={isSelected}
             onPointMove={handlePointMove}
-            draggable={true}
-            onClick={() => {
-              setIsSelected(true)
-              if (transformerRef && transformerRef.current)
-                transformerRef.current?.nodes([shapeRef.current as Konva.Node])
-            }}
+            draggable
+            onClick={() => handleShapeSelect()}
           // Watch for changes in points and update the shape
           // check onDragEnd event
           // onPointsChange={() => {
@@ -108,19 +111,23 @@ export default function CanvasShapes() {
           //   }
           // }}
           />
-          {isSelected && (
-            <Transformer
-              flipEnabled={false}
-              ref={transformerRef}
-              boundBoxFunc={(oldBox, newBox) => {
-                if (Math.abs(newBox.width) < 50 || Math.abs(newBox.height) < 50) {
-                  return oldBox;
-                }
-                return newBox;
-              }}
-              onDblClick={() => setIsSelected(false)}
-            />
-          )}
+          {
+            isSelected && (
+              // TODO consider if avoid using expander due it looks ugly 
+              // or check how to expand the shape instead of visually scaling
+              <Transformer
+                flipEnabled={false}
+                ref={transformerRef}
+                boundBoxFunc={(oldBox, newBox) => {
+                  if (Math.abs(newBox.width) < 50 || Math.abs(newBox.height) < 50) {
+                    return oldBox;
+                  }
+                  return newBox;
+                }}
+                onDblClick={() => setIsSelected(false)}
+              />
+            )
+          }
         </Layer>
       </Stage>
     </div>

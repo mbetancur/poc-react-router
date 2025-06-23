@@ -1,6 +1,7 @@
+import type Konva from "konva";
 import type { LineConfig } from "konva/lib/shapes/Line";
 import { useMemo } from "react";
-import { Circle, Line, Group } from "react-konva";
+import { Circle, Line, Group, Shape } from "react-konva";
 
 export type Point = {
   x: number;
@@ -8,7 +9,7 @@ export type Point = {
 };
 
 export const SNAP_DISTANCE = 20;
-export const MIN_POINTS_FOR_SNAP = 3;
+export const MIN_POINTS_FOR_SNAP = 6;
 
 interface ShapeDrawerProps extends LineConfig {
   points: number[];
@@ -16,14 +17,12 @@ interface ShapeDrawerProps extends LineConfig {
   snapDistance?: number;
   isShapeClosed?: boolean;
   showCircles?: boolean;
-  onPointMove?: (index: number, newX: number, newY: number) => void;
+  onPointMove?: (i: number, newX: number, newY: number) => void;
 }
 
 export default function ShapeDrawer({
   points,
   currentMousePos,
-  x = 0,
-  y = 0,
   snapDistance = SNAP_DISTANCE,
   isShapeClosed = false,
   showCircles = false,
@@ -36,20 +35,22 @@ export default function ShapeDrawer({
     if (!shouldShowCircles) return [];
     const coords: { x: number; y: number }[] = [];
     for (let i = 0; i < points.length - 1; i += 2) {
-      coords.push({ x: points[i] - x, y: points[i + 1] - y });
+      coords.push({ x: points[i], y: points[i + 1] });
     }
     return coords;
-  }, [points, x, y, shouldShowCircles]);
+  }, [points, shouldShowCircles]);
 
   const linePoints = useMemo(() => {
-    const relative: number[] = [];
+    const linePoints: number[] = [];
     for (let i = 0; i < points.length - 1; i += 2) {
-      relative.push(points[i] - x, points[i + 1] - y);
+      linePoints.push(points[i], points[i + 1]);
     }
-    return relative;
-  }, [points, x, y]);
+    return linePoints;
+  }, [points]);
 
   const shouldSnapToStart = useMemo(() => {
+    // TODO set a max number of points
+    console.log(points);
     if (!currentMousePos || points.length < MIN_POINTS_FOR_SNAP || isShapeClosed) return false;
 
     const initialPoint = { x: points[0], y: points[1] };
@@ -66,39 +67,57 @@ export default function ShapeDrawer({
     if (!currentMousePos || isShapeClosed) return null;
 
     if (shouldSnapToStart) {
-      return { x: points[0] - x, y: points[1] - y };
+      return { x: points[0], y: points[1] };
     }
 
-    return { x: currentMousePos.x - x, y: currentMousePos.y - y };
-  }, [currentMousePos, shouldSnapToStart, points, x, y, isShapeClosed]);
+    return { x: currentMousePos.x, y: currentMousePos.y };
+  }, [currentMousePos, shouldSnapToStart, points, isShapeClosed]);
 
   const previewLinePoints = useMemo(() => {
     if (points.length > 0 && completeShapeLinePos && !isShapeClosed) {
-      const lastPoint = { x: points[points.length - 2] - x, y: points[points.length - 1] - y };
+      const lastPoint = { x: points[points.length - 2], y: points[points.length - 1] };
       return [lastPoint.x, lastPoint.y, completeShapeLinePos.x, completeShapeLinePos.y];
     }
     return [];
-  }, [points, completeShapeLinePos, x, y, isShapeClosed]);
+  }, [points, completeShapeLinePos, isShapeClosed]);
 
-  const handleCircleDragEnd = (index: number, e: any) => {
+  const handleCircleDragEnd = (i: number, e: Konva.KonvaEventObject<MouseEvent>) => {
     if (onPointMove && isShapeClosed) {
-      const newX = e.target.x() + x;
-      const newY = e.target.y() + y;
-      onPointMove(index, newX, newY);
+      const newX = e.target.x();
+      const newY = e.target.y();
+      onPointMove(i, newX, newY);
     }
   };
 
   return (
-    <Group x={x} y={y} {...rest}>
-      <Line
+    <Group {...rest}>
+      <Shape
+        sceneFunc={(ctx, shape) => {
+          if (linePoints.length < 4) return;
+          ctx.beginPath();
+          console.log(ctx);
+
+          for (let i = 0; i < linePoints.length; i += 2) {
+            const x = linePoints[i];
+            const y = linePoints[i + 1];
+            ctx.quadraticCurveTo(x, y, x, y);
+          }
+          if (isShapeClosed) ctx.closePath();
+          ctx.fillStrokeShape(shape);
+        }}
+        fill="lightblue"
+        stroke="blue"
+        strokeWidth={2}
+      />
+
+      {/* <Line
         name="shape"
         points={linePoints}
         stroke="blue"
         strokeWidth={2}
         fill={isShapeClosed ? "lightblue" : undefined}
         closed={isShapeClosed}
- 
-      />
+      /> */}
 
       {circleCoords.map((coord, i) => (
         <Circle
@@ -114,10 +133,12 @@ export default function ShapeDrawer({
         />
       ))}
 
-      {shouldSnapToStart && points.length > 0 && (
+      {shouldSnapToStart && (
+        // TODO check if possible to merge this Snapable point preview
+        // with the line preview
         <Circle
-          x={points[0] - x}
-          y={points[1] - y}
+          x={points[0]}
+          y={points[1]}
           radius={8}
           fill="green"
           stroke="darkgreen"
@@ -125,14 +146,13 @@ export default function ShapeDrawer({
         />
       )}
 
-      {previewLinePoints.length > 0 && (
-        <Line
-          points={previewLinePoints}
-          stroke={shouldSnapToStart ? "green" : "red"}
-          strokeWidth={2}
-          dash={[5, 5]}
-        />
-      )}
+      <Line
+        points={previewLinePoints}
+        stroke={shouldSnapToStart ? "green" : "red"}
+        strokeWidth={2}
+        dash={[5, 5]}
+      />
+
     </Group>
   )
 }
