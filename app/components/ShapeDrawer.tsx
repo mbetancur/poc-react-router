@@ -15,6 +15,8 @@ interface ShapeDrawerProps extends LineConfig {
   currentMousePos?: Point | null;
   snapDistance?: number;
   isShapeClosed?: boolean;
+  showCircles?: boolean;
+  onPointMove?: (index: number, newX: number, newY: number) => void;
 }
 
 export default function ShapeDrawer({
@@ -24,16 +26,20 @@ export default function ShapeDrawer({
   y = 0,
   snapDistance = SNAP_DISTANCE,
   isShapeClosed = false,
+  showCircles = false,
+  onPointMove,
   ...rest
 }: ShapeDrawerProps) {
+  const shouldShowCircles = !isShapeClosed || showCircles;
 
   const circleCoords = useMemo(() => {
+    if (!shouldShowCircles) return [];
     const coords: { x: number; y: number }[] = [];
     for (let i = 0; i < points.length - 1; i += 2) {
       coords.push({ x: points[i] - x, y: points[i + 1] - y });
     }
     return coords;
-  }, [points, x, y]);
+  }, [points, x, y, shouldShowCircles]);
 
   const linePoints = useMemo(() => {
     const relative: number[] = [];
@@ -74,8 +80,26 @@ export default function ShapeDrawer({
     return [];
   }, [points, completeShapeLinePos, x, y, isShapeClosed]);
 
+  const handleCircleDragEnd = (index: number, e: any) => {
+    if (onPointMove && isShapeClosed) {
+      const newX = e.target.x() + x;
+      const newY = e.target.y() + y;
+      onPointMove(index, newX, newY);
+    }
+  };
+
   return (
     <Group x={x} y={y} {...rest}>
+      <Line
+        name="shape"
+        points={linePoints}
+        stroke="blue"
+        strokeWidth={2}
+        fill={isShapeClosed ? "lightblue" : undefined}
+        closed={isShapeClosed}
+ 
+      />
+
       {circleCoords.map((coord, i) => (
         <Circle
           key={i}
@@ -85,6 +109,8 @@ export default function ShapeDrawer({
           fill="white"
           stroke="gray"
           strokeWidth={1}
+          draggable={isShapeClosed && showCircles}
+          onDragEnd={(e) => handleCircleDragEnd(i, e)}
         />
       ))}
 
@@ -98,15 +124,6 @@ export default function ShapeDrawer({
           strokeWidth={2}
         />
       )}
-
-      <Line
-        name="shape"
-        points={linePoints}
-        stroke="blue"
-        strokeWidth={2}
-        fill={isShapeClosed ? "blue" : undefined}
-        closed={isShapeClosed}
-      />
 
       {previewLinePoints.length > 0 && (
         <Line
