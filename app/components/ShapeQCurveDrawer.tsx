@@ -1,6 +1,6 @@
 import type Konva from "konva";
-import type { LineConfig } from "konva/lib/shapes/Line";
-import { useMemo } from "react";
+import type { LineConfig } from "konva/lib/shapes/Line"; //  Is this import correct?
+import { useMemo, useEffect, useState } from "react";
 import { Circle, Line, Group, Shape } from "react-konva";
 
 export type Point = {
@@ -11,8 +11,8 @@ export type Point = {
 export const SNAP_DISTANCE = 20;
 export const MIN_POINTS_FOR_SNAP = 6;
 
+// TODO consider avoid using LineConfig and use only own interface
 interface ShapeDrawerProps extends LineConfig {
-  points: number[];
   currentMousePos?: Point | null;
   snapDistance?: number;
   isShapeClosed?: boolean;
@@ -20,8 +20,8 @@ interface ShapeDrawerProps extends LineConfig {
   onPointMove?: (i: number, newX: number, newY: number) => void;
 }
 
-export default function ShapeDrawer({
-  points,
+export default function ShapeQCurveDrawer({
+  points = [],
   currentMousePos,
   snapDistance = SNAP_DISTANCE,
   isShapeClosed = false,
@@ -30,21 +30,28 @@ export default function ShapeDrawer({
   ...rest
 }: ShapeDrawerProps) {
 
+  const [curveControlPoints, setCurveControlPoints] = useState<Point[]>([]);
+
+  const anchorQCurveCoords = useMemo(() => {
+    if (points.length < 4) return [];
+    const coords: Point[] = [];
+    for (let i = 0; i < points.length - 2; i += 2) {
+      const curveControlPoint = { x: (points[i] + points[i + 2]) / 2, y: (points[i + 1] + points[i + 3]) / 2 };
+      coords.push(curveControlPoint);
+    }
+    return coords;
+  }, [points]);
+
+  useEffect(() => {
+    setCurveControlPoints(anchorQCurveCoords);
+  }, [anchorQCurveCoords]);
+
   const anchorCoords = useMemo(() => {
-    if (!showAnchors) return [];
     const coords: { x: number; y: number }[] = [];
     for (let i = 0; i < points.length - 1; i += 2) {
       coords.push({ x: points[i], y: points[i + 1] });
     }
     return coords;
-  }, [points, showAnchors]);
-
-  const linePoints = useMemo(() => {
-    const linePoints: number[] = [];
-    for (let i = 0; i < points.length - 1; i += 2) {
-      linePoints.push(points[i], points[i + 1]);
-    }
-    return linePoints;
   }, [points]);
 
   const shouldSnapToStart = useMemo(() => {
@@ -87,19 +94,36 @@ export default function ShapeDrawer({
     }
   };
 
+  const handleQCurveCircleDragEnd = (i: number, e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (isShapeClosed) {
+      const newX = e.target.x();
+      const newY = e.target.y();
+      setCurveControlPoints(prev => {
+        const newPoints = [...prev];
+        newPoints[i] = { x: newX, y: newY };
+        return newPoints;
+      });
+    }
+  };
+
   return (
     <Group {...rest}>
       <Shape
         sceneFunc={(ctx, shape) => {
-          if (linePoints.length < 4) return;
+          if (points.length < 4) return;
           ctx.beginPath();
-
-          for (let i = 0; i < linePoints.length; i += 2) {
-            const x = linePoints[i];
-            const y = linePoints[i + 1];
-            ctx.quadraticCurveTo(x, y, x, y);
+          ctx.moveTo(points[0], points[1]);
+          for (let i = 0; i < points.length - 2; i += 2) {
+            const pointsIndex = i + 2;
+            const controlPointIndex = i / 2;
+            const x = points[pointsIndex];
+            const y = points[pointsIndex + 1];
+            const cPx = curveControlPoints[controlPointIndex]?.x;
+            const cPy = curveControlPoints[controlPointIndex]?.y;
+            ctx.quadraticCurveTo(cPx, cPy, x, y);
           }
-          if (isShapeClosed) ctx.closePath();
+
+          // if (isShapeClosed) ctx.closePath(); // TODO check if needed
           ctx.fillStrokeShape(shape);
         }}
         fill="lightblue"
@@ -107,17 +131,8 @@ export default function ShapeDrawer({
         strokeWidth={2}
       />
 
-      {/* DONT REMOVE YET first aprproach with line 
-      <Line
-        name="shape"
-        points={linePoints}
-        stroke="blue"
-        strokeWidth={2}
-        fill={isShapeClosed ? "lightblue" : undefined}
-        closed={isShapeClosed}
-      /> */}
-
-      {anchorCoords.map((coord, i) => (
+      {/* TODO Check if Grouping anchors is better */}
+      {showAnchors && anchorCoords.map((coord, i) => (
         <Circle
           key={i}
           x={coord.x}
@@ -126,13 +141,27 @@ export default function ShapeDrawer({
           fill="white"
           stroke="gray"
           strokeWidth={1}
-          draggable={isShapeClosed && showAnchors}
+          draggable={isShapeClosed}
           onDragEnd={(e) => handleCircleDragEnd(i, e)}
         />
       ))}
 
+      {showAnchors && curveControlPoints.length > 0 && curveControlPoints.map((coord, i) => (
+        <Circle
+          key={i}
+          x={coord.x}
+          y={coord.y}
+          radius={5}
+          fill="yellow"
+          stroke="gray"
+          strokeWidth={1}
+          draggable={isShapeClosed}
+          onDragEnd={(e) => handleQCurveCircleDragEnd(i, e)}
+        />
+      ))}
+
       {shouldSnapToStart && (
-        // TODO check if possible to merge this Snapable point preview
+        // TODO check if possible to merge this Snapable point preview state + condition
         // with the line preview
         <Circle
           x={points[0]}

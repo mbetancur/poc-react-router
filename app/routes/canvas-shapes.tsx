@@ -1,7 +1,8 @@
 import type Konva from "konva";
 import { useMemo, useRef, useState } from "react";
 import { Layer, Stage, Transformer } from "react-konva";
-import ShapeDrawer, { MIN_POINTS_FOR_SNAP, SNAP_DISTANCE, type Point } from "~/components/ShapeDrawer";
+// TODO create Shape pattern for different shapes and properties
+import ShapeQCurveDrawer, { MIN_POINTS_FOR_SNAP, SNAP_DISTANCE, type Point } from "~/components/ShapeQCurveDrawer";
 
 export default function CanvasShapes() {
   const [points, setPoints] = useState<Point[]>([]);
@@ -19,6 +20,7 @@ export default function CanvasShapes() {
       // TODO consider merging state of points here and shapeDrawer (flat map of points)
       if (points.length >= (MIN_POINTS_FOR_SNAP / 2)) {
         const initialPoint = points[0];
+        // TODO move to utils
         const distance = Math.sqrt(
           Math.pow(pos.x - initialPoint.x, 2) +
           Math.pow(pos.y - initialPoint.y, 2)
@@ -93,13 +95,26 @@ export default function CanvasShapes() {
         onMouseMove={handleMouseMove}
       >
         <Layer>
-          <ShapeDrawer
+          <ShapeQCurveDrawer
             ref={shapeRef}
             points={points.flatMap(point => [point.x, point.y])}
             currentMousePos={currentMousePos}
             snapDistance={SNAP_DISTANCE}
             isShapeClosed={isShapeClosed}
-            showCircles={isSelected}
+            showAnchors={!isShapeClosed || isSelected}
+            onPointMove={handlePointMove}
+            draggable
+            onClick={() => handleShapeSelect()}
+          />
+
+          {/* DONT REMOVE YET first aprproach with Shapes no curves */}
+          {/* <ShapeDrawer
+            ref={shapeRef}
+            points={points.flatMap(point => [point.x, point.y])}
+            currentMousePos={currentMousePos}
+            snapDistance={SNAP_DISTANCE}
+            isShapeClosed={isShapeClosed}
+            showAnchors={!isShapeClosed || isSelected}
             onPointMove={handlePointMove}
             draggable
             onClick={() => handleShapeSelect()}
@@ -110,11 +125,12 @@ export default function CanvasShapes() {
           //     shapeRef.current.points(points.flatMap(point => [point.x, point.y]));
           //   }
           // }}
-          />
+          /> */}
           {
             isSelected && (
               // TODO consider if avoid using expander due it looks ugly 
               // or check how to expand the shape instead of visually scaling
+              // FIXME bug in tranformer , creating extra space - check hitFunc vs sceneFunc
               <Transformer
                 flipEnabled={false}
                 ref={transformerRef}
