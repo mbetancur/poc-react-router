@@ -32,11 +32,11 @@ export default function ShapeQCurveDrawer({
 
   const [curveControlPoints, setCurveControlPoints] = useState<Point[]>([]);
 
-  const anchorQCurveCoords = useMemo(() => {
+  const anchorQCurveCoords: Point[] = useMemo(() => {
     if (points.length < 4) return [];
     const coords: Point[] = [];
     for (let i = 0; i < points.length - 2; i += 2) {
-      const curveControlPoint = { x: (points[i] + points[i + 2]) / 2, y: (points[i + 1] + points[i + 3]) / 2 };
+      const curveControlPoint: Point = { x: (points[i] + points[i + 2]) / 2, y: (points[i + 1] + points[i + 3]) / 2 };
       coords.push(curveControlPoint);
     }
     return coords;
@@ -46,15 +46,15 @@ export default function ShapeQCurveDrawer({
     setCurveControlPoints(anchorQCurveCoords);
   }, [anchorQCurveCoords]);
 
-  const anchorCoords = useMemo(() => {
-    const coords: { x: number; y: number }[] = [];
+  const anchorCoords: Point[] = useMemo(() => {
+    const coords: Point[] = [];
     for (let i = 0; i < points.length - 1; i += 2) {
       coords.push({ x: points[i], y: points[i + 1] });
     }
     return coords;
   }, [points]);
 
-  const shouldSnapToStart = useMemo(() => {
+  const shouldSnapToStart: boolean = useMemo(() => {
     // TODO set a max number of points
     if (!currentMousePos || points.length < MIN_POINTS_FOR_SNAP || isShapeClosed) return false;
 
@@ -68,7 +68,7 @@ export default function ShapeQCurveDrawer({
     return distance <= snapDistance;
   }, [currentMousePos, points, snapDistance, isShapeClosed]);
 
-  const completeShapeLinePos = useMemo(() => {
+  const completeShapeLinePos: Point | null = useMemo(() => {
     if (!currentMousePos || isShapeClosed) return null;
 
     if (shouldSnapToStart) {
