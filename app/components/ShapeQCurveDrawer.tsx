@@ -36,7 +36,11 @@ export default function ShapeQCurveDrawer({
     if (points.length < 4) return [];
     const coords: Point[] = [];
     for (let i = 0; i < points.length - 2; i += 2) {
-      const curveControlPoint: Point = { x: (points[i] + points[i + 2]) / 2, y: (points[i + 1] + points[i + 3]) / 2 };
+      const startX = points[i];
+      const startY = points[i + 1];
+      const endX = points[i + 2];
+      const endY = points[i + 3];
+      const curveControlPoint: Point = { x: (startX + endX) / 2, y: (startY + endY) / 2 };
       coords.push(curveControlPoint);
     }
     return coords;

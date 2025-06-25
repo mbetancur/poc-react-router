@@ -34,10 +34,22 @@ export default function ShapeBCurveDrawer({
 
   const anchorBCurveCoords = useMemo(() => {
     if (points.length < 4) return [];
+    
     const coords: Point[] = [];
     for (let i = 0; i < points.length - 2; i += 2) {
-      const curveControlPoint = { x: (points[i] + points[i + 2]) / 3, y: (points[i + 1] + points[i + 3]) / 3 };
-      const curveControlPoint2 = { x: curveControlPoint.x * 2, y: curveControlPoint.y * 2 };
+      const startX = points[i];
+      const startY = points[i + 1];
+      const endX = points[i + 2];
+      const endY = points[i + 3];
+
+      const curveControlPoint = {
+        x: startX + (endX - startX) / 3,
+        y: startY + (endY - startY) / 3
+      };
+      const curveControlPoint2 = {
+        x: startX + (endX - startX) * 2 / 3,
+        y: startY + (endY - startY) * 2 / 3
+      };
       coords.push(curveControlPoint, curveControlPoint2);
     }
     return coords;
@@ -114,9 +126,10 @@ export default function ShapeBCurveDrawer({
           if (points.length < 4) return;
           ctx.beginPath();
           ctx.moveTo(points[0], points[1]);
+          // TODO Improve this mapping, it's not clear
           for (let i = 0; i < points.length - 2; i += 2) {
             const pointsIndex = i + 2;
-            const controlPointIndex = i / 2;
+            const controlPointIndex = i;
             const x = points[pointsIndex];
             const y = points[pointsIndex + 1];
             const cPx = curveControlPoints[controlPointIndex]?.x;
