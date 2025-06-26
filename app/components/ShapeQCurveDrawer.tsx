@@ -1,5 +1,4 @@
 import type Konva from "konva";
-import type { LineConfig } from "konva/lib/shapes/Line"; //  Is this import correct?
 import { useMemo, useEffect, useState } from "react";
 import { Circle, Line, Group, Shape } from "react-konva";
 
@@ -11,11 +10,9 @@ export type Point = {
 export const SNAP_DISTANCE = 20;
 export const MIN_POINTS_FOR_SNAP = 6;
 
-// TODO consider avoid using LineConfig and use only own interface
-interface ShapeDrawerProps extends LineConfig {
+interface ShapeDrawerProps extends Konva.LineConfig {
   currentMousePos?: Point | null;
   snapDistance?: number;
-  isShapeClosed?: boolean;
   showAnchors?: boolean;
   onPointMove?: (i: number, newX: number, newY: number) => void;
 }
@@ -24,7 +21,7 @@ export default function ShapeQCurveDrawer({
   points = [],
   currentMousePos,
   snapDistance = SNAP_DISTANCE,
-  isShapeClosed = false,
+  closed = false,
   showAnchors = false,
   onPointMove,
   ...rest
@@ -60,7 +57,7 @@ export default function ShapeQCurveDrawer({
 
   const shouldSnapToStart: boolean = useMemo(() => {
     // TODO set a max number of points
-    if (!currentMousePos || points.length < MIN_POINTS_FOR_SNAP || isShapeClosed) return false;
+    if (!currentMousePos || points.length < MIN_POINTS_FOR_SNAP || closed) return false;
 
     const initialPoint = { x: points[0], y: points[1] };
     // TODO extract in utils
@@ -70,28 +67,28 @@ export default function ShapeQCurveDrawer({
     );
 
     return distance <= snapDistance;
-  }, [currentMousePos, points, snapDistance, isShapeClosed]);
+  }, [currentMousePos, points, snapDistance, closed]);
 
   const completeShapeLinePos: Point | null = useMemo(() => {
-    if (!currentMousePos || isShapeClosed) return null;
+    if (!currentMousePos || closed) return null;
 
     if (shouldSnapToStart) {
       return { x: points[0], y: points[1] };
     }
 
     return { x: currentMousePos.x, y: currentMousePos.y };
-  }, [currentMousePos, shouldSnapToStart, points, isShapeClosed]);
+  }, [currentMousePos, shouldSnapToStart, points, closed]);
 
   const previewLinePoints = useMemo(() => {
-    if (points.length > 0 && completeShapeLinePos && !isShapeClosed) {
+    if (points.length > 0 && completeShapeLinePos && !closed) {
       const lastPoint = { x: points[points.length - 2], y: points[points.length - 1] };
       return [lastPoint.x, lastPoint.y, completeShapeLinePos.x, completeShapeLinePos.y];
     }
     return [];
-  }, [points, completeShapeLinePos, isShapeClosed]);
+  }, [points, completeShapeLinePos, closed]);
 
   const handleCircleDragEnd = (i: number, e: Konva.KonvaEventObject<MouseEvent>) => {
-    if (onPointMove && isShapeClosed) {
+    if (onPointMove && closed) {
       const newX = e.target.x();
       const newY = e.target.y();
       onPointMove(i, newX, newY);
@@ -99,7 +96,7 @@ export default function ShapeQCurveDrawer({
   };
 
   const handleQCurveCircleDragEnd = (i: number, e: Konva.KonvaEventObject<MouseEvent>) => {
-    if (isShapeClosed) {
+    if (closed) {
       const newX = e.target.x();
       const newY = e.target.y();
       setCurveControlPoints(prev => {
@@ -127,7 +124,7 @@ export default function ShapeQCurveDrawer({
             ctx.quadraticCurveTo(cPx, cPy, x, y);
           }
 
-          // if (isShapeClosed) ctx.closePath(); // TODO check if needed
+          // if (closed) ctx.closePath(); // TODO check if needed
           ctx.fillStrokeShape(shape);
         }}
         fill="lightblue"
@@ -145,7 +142,7 @@ export default function ShapeQCurveDrawer({
           fill="white"
           stroke="gray"
           strokeWidth={1}
-          draggable={isShapeClosed}
+          draggable={closed}
           onDragEnd={(e) => handleCircleDragEnd(i, e)}
         />
       ))}
@@ -159,7 +156,7 @@ export default function ShapeQCurveDrawer({
           fill="yellow"
           stroke="gray"
           strokeWidth={1}
-          draggable={isShapeClosed}
+          draggable={closed}
           onDragEnd={(e) => handleQCurveCircleDragEnd(i, e)}
         />
       ))}
