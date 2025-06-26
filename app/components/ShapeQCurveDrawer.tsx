@@ -1,6 +1,6 @@
 import type Konva from "konva";
-import { useMemo, useEffect, useState } from "react";
-import { Circle, Line, Group, Shape } from "react-konva";
+import { useMemo, useEffect, useState, useRef } from "react";
+import { Circle, Line, Group, Shape, Rect } from "react-konva";
 
 export type Point = {
   x: number;
@@ -12,18 +12,24 @@ export const MIN_POINTS_FOR_SNAP = 6;
 
 interface ShapeDrawerProps extends Konva.LineConfig {
   currentMousePos?: Point | null;
-  snapDistance?: number;
-  showAnchors?: boolean;
   onPointMove?: (i: number, newX: number, newY: number) => void;
+  onShapeSelect?: () => void;
+  onTransformEnd?: (e: Konva.KonvaEventObject<Event>) => void;
+  shapeRef?: React.RefObject<Konva.Rect>;
+  showAnchors?: boolean;
+  snapDistance?: number;
 }
 
 export default function ShapeQCurveDrawer({
-  points = [],
-  currentMousePos,
-  snapDistance = SNAP_DISTANCE,
   closed = false,
-  showAnchors = false,
+  currentMousePos,
   onPointMove,
+  onShapeSelect,
+  onTransformEnd,
+  points = [],
+  shapeRef,
+  showAnchors = false,
+  snapDistance = SNAP_DISTANCE,
   ...rest
 }: ShapeDrawerProps) {
 
@@ -107,8 +113,46 @@ export default function ShapeQCurveDrawer({
     }
   };
 
+  // TODO rename and move to utils
+  const bounds = useMemo(() => {
+    if (points.length < 4) return { x: 0, y: 0, width: 0, height: 0 };
+
+    let minX = points[0];
+    let maxX = points[0];
+    let minY = points[1];
+    let maxY = points[1];
+
+    for (let i = 0; i < points.length; i += 2) {
+      minX = Math.min(minX, points[i]);
+      maxX = Math.max(maxX, points[i]);
+      minY = Math.min(minY, points[i + 1]);
+      maxY = Math.max(maxY, points[i + 1]);
+    }
+
+    return {
+      x: minX,
+      y: minY,
+      width: maxX - minX,
+      height: maxY - minY
+    };
+  }, [points]);
+
   return (
     <Group {...rest}>
+      {closed && (
+        <Rect
+          ref={shapeRef}
+          x={bounds.x}
+          y={bounds.y}
+          width={bounds.width}
+          height={bounds.height}
+          fill="transparent"
+          stroke="transparent"
+          strokeWidth={0}
+          draggable
+          onTransformEnd={onTransformEnd}
+        />
+      )}
       <Shape
         sceneFunc={(ctx, shape) => {
           if (points.length < 4) return;
@@ -130,6 +174,7 @@ export default function ShapeQCurveDrawer({
         fill="lightblue"
         stroke="blue"
         strokeWidth={2}
+        onClick={() => onShapeSelect?.()}
       />
 
       {/* TODO Check if Grouping anchors is better */}
@@ -161,7 +206,7 @@ export default function ShapeQCurveDrawer({
         />
       ))}
 
-      {shouldSnapToStart && (
+      {shouldSnapToStart && !closed && (
         // TODO check if possible to merge this Snapable point preview state + condition
         // with the line preview
         <Circle
@@ -174,13 +219,13 @@ export default function ShapeQCurveDrawer({
         />
       )}
 
-      <Line
+      {!closed && <Line
         points={previewLinePoints}
         stroke={shouldSnapToStart ? "green" : "red"}
         strokeWidth={2}
         dash={[5, 5]}
-      />
+      />}
 
-    </Group>
+    </Group >
   )
 }
