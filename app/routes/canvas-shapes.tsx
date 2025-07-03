@@ -1,56 +1,52 @@
 import type Konva from "konva";
 import { useMemo, useRef, useState } from "react";
-import { Layer, Stage, Transformer } from "react-konva";
+import { Layer, Stage, Transformer, Image } from "react-konva";
+import useImage from "use-image";
 
 // TODO create Shape pattern for different shapes and properties
 import ShapeBCurveDrawer, { MIN_POINTS_FOR_SNAP, SNAP_DISTANCE, type Point } from "~/components/ShapeBCurveDrawer";
 import ShapeQCurveDrawer from "~/components/ShapeQCurveDrawer";
 
+// Utility functions
+const getDistance = (p1: Point, p2: Point) =>
+  Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+
+const getCenter = (points: Point[]) => ({
+  x: points.reduce((sum, p) => sum + p.x, 0) / points.length,
+  y: points.reduce((sum, p) => sum + p.y, 0) / points.length
+});
+
 export default function CanvasShapes() {
-  const [points, setPoints] = useState<Point[]>([]);
   const [currentMousePos, setCurrentMousePos] = useState<Point | null>(null);
+  const [isShapeSelected, setIsShapeSelected] = useState(false);
   const [isShapeClosed, setIsShapeClosed] = useState(false);
-  const [isSelected, setIsSelected] = useState(false);
+  const [points, setPoints] = useState<Point[]>([]);
+  const [rotation, setRotation] = useState(0);
 
   const transformerRef = useRef<Konva.Transformer>(null);
   const shapeRef = useRef<Konva.Rect>(null);
 
+  const isDrawingStarted = useMemo(() => points.length > 0, [points]);
+
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
     const pos = e?.target?.getStage()?.getPointerPosition();
+    if (!pos || isShapeClosed) return;
 
-    if (pos && !isShapeClosed) {
-      // TODO consider merging state of points here and shapeDrawer (flat map of points)
-      if (points.length >= (MIN_POINTS_FOR_SNAP / 2)) {
-        const initialPoint = points[0];
-        // TODO move to utils
-        const distance = Math.sqrt(
-          Math.pow(pos.x - initialPoint.x, 2) +
-          Math.pow(pos.y - initialPoint.y, 2)
-        );
-
-        if (distance <= SNAP_DISTANCE) {
-          setPoints(prev => [...prev, initialPoint]);
-          setIsShapeClosed(true);
-          setCurrentMousePos(null);
-          return;
-        }
-      }
-
-      setPoints(prev => [...prev, pos]);
+    if (points.length >= MIN_POINTS_FOR_SNAP / 2 && getDistance(points[0], pos) <= SNAP_DISTANCE) {
+      setPoints(prev => [...prev, points[0]]);
+      setIsShapeClosed(true);
+      setCurrentMousePos(null);
+      return;
     }
+
+    setPoints(prev => [...prev, pos]);
   };
 
-  const isDrawingStarted: boolean = useMemo(() => points.length > 0, [points]);
-
   const handleMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    //TODO change to false when shape is closed
-    if (!isDrawingStarted) return;
+    if (!isDrawingStarted || isShapeClosed) return;
 
     const pos = e?.target?.getStage()?.getPointerPosition();
-
-    if (pos && !isShapeClosed) {
-      setCurrentMousePos(pos);
-    }
+    if (pos) setCurrentMousePos(pos);
   };
 
   const handlePointMove = (i: number, newX: number, newY: number) => {
@@ -60,23 +56,19 @@ export default function CanvasShapes() {
       const newPoints = [...prev];
       newPoints[i] = { x: newX, y: newY };
 
-      if (prev.length > 0) {
-        if (i === 0) {
-          newPoints[newPoints.length - 1] = { x: newX, y: newY };
-        } else if (i === newPoints.length - 1) {
-          newPoints[0] = { x: newX, y: newY };
-        }
-      }
+      // This is a workaround to sync first/last points
+      if (i === 0) newPoints[newPoints.length - 1] = { x: newX, y: newY };
+      else if (i === newPoints.length - 1) newPoints[0] = { x: newX, y: newY };
 
       return newPoints;
     });
   };
 
   const handleShapeSelect = () => {
-    setIsSelected(true);
-    if (transformerRef && transformerRef.current && shapeRef.current) {
-      transformerRef.current?.nodes([shapeRef.current as Konva.Node]);
+    if (transformerRef.current && shapeRef.current) {
+      transformerRef.current.nodes([shapeRef.current]);
     }
+    setIsShapeSelected(true);
   };
 
   const handleTransformEnd = (e: Konva.KonvaEventObject<Event>) => {
@@ -85,32 +77,30 @@ export default function CanvasShapes() {
     const node = e.target as Konva.Rect;
     const scaleX = node.scaleX();
     const scaleY = node.scaleY();
+
+    const rotation = node.getAbsoluteRotation();
+    setRotation(rotation)
+
+    // This is a workaround to reset the scale of the shape and set the new points after the transform resize
     node.scaleX(1);
     node.scaleY(1);
 
-    let sumX = 0;
-    let sumY = 0;
-    for (const point of points) {
-      sumX += point.x;
-      sumY += point.y;
-    }
-    const centerX = sumX / points.length;
-    const centerY = sumY / points.length;
-
+    const center = getCenter(points);
     const newPoints = points.map(point => ({
-      x: centerX + (point.x - centerX) * scaleX,
-      y: centerY + (point.y - centerY) * scaleY
+      x: center.x + (point.x - center.x) * scaleX,
+      y: center.y + (point.y - center.y) * scaleY
     }));
 
     setPoints(newPoints);
   };
+  // const [mammImage] = useImage('./testmap.png');
 
   return (
     <div>
       <h1>Drawing Shapes</h1>
       <Stage
-        width={1200}
-        height={700}
+        width={2000}
+        height={1000}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
       >
@@ -121,22 +111,24 @@ export default function CanvasShapes() {
           currentMousePos={currentMousePos}
           snapDistance={SNAP_DISTANCE}
           isShapeClosed={isShapeClosed}
-          showAnchors={!isShapeClosed || isSelected}
+          showAnchors={!isShapeClosed || isShapeSelected}
           onPointMove={handlePointMove}
           draggable
           onClick={() => handleShapeSelect()}
         /> */}
+          {/* <Image x={1} y={0} image={mammImage} width={2400} height={1563} /> */}
           <ShapeQCurveDrawer
-            shapeRef={shapeRef as React.RefObject<Konva.Rect>}
-            points={points.flatMap(point => [point.x, point.y])}
-            currentMousePos={currentMousePos}
-            snapDistance={SNAP_DISTANCE}
             closed={isShapeClosed}
-            showAnchors={!isShapeClosed || isSelected}
+            currentMousePos={currentMousePos}
+            customRotation={rotation}
+            draggable
             onPointMove={handlePointMove}
             onShapeSelect={handleShapeSelect}
-            draggable
             onTransformEnd={handleTransformEnd}
+            points={points.flatMap(point => [point.x, point.y])}
+            shapeRef={shapeRef as React.RefObject<Konva.Rect>}
+            showAnchors={!isShapeClosed || isShapeSelected}
+            snapDistance={SNAP_DISTANCE}
           />
 
           {/* DONT REMOVE YET first aprproach with Shapes no curves */}
@@ -146,7 +138,7 @@ export default function CanvasShapes() {
           currentMousePos={currentMousePos}
           snapDistance={SNAP_DISTANCE}
           isShapeClosed={isShapeClosed}
-          showAnchors={!isShapeClosed || isSelected}
+          showAnchors={!isShapeClosed || isShapeSelected}
           onPointMove={handlePointMove}
           draggable
           onClick={() => handleShapeSelect()}
@@ -159,12 +151,11 @@ export default function CanvasShapes() {
         // }}
         /> */}
           {
-            isSelected && (
-              // TODO consider if avoid using expander due it looks ugly 
-              // or check how to expand the shape instead of visually scaling
+            isShapeSelected && (
               // FIXME bug in tranformer , creating extra space - check hitFunc vs sceneFunc
               <Transformer
                 ref={transformerRef}
+                padding={20}
                 boundBoxFunc={(oldBox, newBox) => {
                   // Add max size
                   if (Math.abs(newBox.width) < 50 || Math.abs(newBox.height) < 50) {
@@ -172,7 +163,7 @@ export default function CanvasShapes() {
                   }
                   return newBox;
                 }}
-                onDblClick={() => setIsSelected(false)}
+                onDblClick={() => setIsShapeSelected(false)}
               />
             )
           }

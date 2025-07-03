@@ -1,7 +1,8 @@
 import type Konva from "konva";
-import { useMemo, useEffect, useState, useRef } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { Circle, Line, Group, Shape, Rect } from "react-konva";
 
+// TODO move to proper file
 export type Point = {
   x: number;
   y: number;
@@ -10,7 +11,7 @@ export type Point = {
 export const SNAP_DISTANCE = 20;
 export const MIN_POINTS_FOR_SNAP = 6;
 
-interface ShapeDrawerProps extends Konva.LineConfig {
+interface ShapeDrawerProps extends Konva.ShapeConfig {
   currentMousePos?: Point | null;
   onPointMove?: (i: number, newX: number, newY: number) => void;
   onShapeSelect?: () => void;
@@ -18,11 +19,13 @@ interface ShapeDrawerProps extends Konva.LineConfig {
   shapeRef?: React.RefObject<Konva.Rect>;
   showAnchors?: boolean;
   snapDistance?: number;
+  customRotation?: number;
 }
 
 export default function ShapeQCurveDrawer({
   closed = false,
   currentMousePos,
+  customRotation = 0,
   onPointMove,
   onShapeSelect,
   onTransformEnd,
@@ -34,8 +37,9 @@ export default function ShapeQCurveDrawer({
 }: ShapeDrawerProps) {
 
   const [curveControlPoints, setCurveControlPoints] = useState<Point[]>([]);
+  const [finalBounds, setFinalBounds] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
 
-  const anchorQCurveCoords: Point[] = useMemo(() => {
+  const calculatedAnchorQCurveCoords: Point[] = useMemo(() => {
     if (points.length < 4) return [];
     const coords: Point[] = [];
     for (let i = 0; i < points.length - 2; i += 2) {
@@ -50,8 +54,8 @@ export default function ShapeQCurveDrawer({
   }, [points]);
 
   useEffect(() => {
-    setCurveControlPoints(anchorQCurveCoords);
-  }, [anchorQCurveCoords]);
+    setCurveControlPoints(calculatedAnchorQCurveCoords);
+  }, [calculatedAnchorQCurveCoords]);
 
   const anchorCoords: Point[] = useMemo(() => {
     const coords: Point[] = [];
@@ -113,29 +117,57 @@ export default function ShapeQCurveDrawer({
     }
   };
 
-  // TODO rename and move to utils
-  const bounds = useMemo(() => {
-    if (points.length < 4) return { x: 0, y: 0, width: 0, height: 0 };
-
-    let minX = points[0];
-    let maxX = points[0];
-    let minY = points[1];
-    let maxY = points[1];
-
-    for (let i = 0; i < points.length; i += 2) {
-      minX = Math.min(minX, points[i]);
-      maxX = Math.max(maxX, points[i]);
-      minY = Math.min(minY, points[i + 1]);
-      maxY = Math.max(maxY, points[i + 1]);
-    }
-
+  function rotatePoint(x: number, y: number, cx: number, cy: number, angleDeg: number) {
+    // TODO  move to utils  
+    const angleRad = angleDeg * Math.PI / 180;
+    const cos = Math.cos(angleRad);
+    const sin = Math.sin(angleRad);
+    const dx = x - cx;
+    const dy = y - cy;
     return {
-      x: minX,
-      y: minY,
-      width: maxX - minX,
-      height: maxY - minY
+      x: cx + dx * cos - dy * sin,
+      y: cy + dx * sin + dy * cos,
     };
-  }, [points]);
+  }
+
+  useEffect(() => {
+    if (closed && !finalBounds && points.length >= 4) {
+      let minX = points[0];
+      let maxX = points[0];
+      let minY = points[1];
+      let maxY = points[1];
+
+      for (let i = 0; i < points.length; i += 2) {
+        minX = Math.min(minX, points[i]);
+        maxX = Math.max(maxX, points[i]);
+        minY = Math.min(minY, points[i + 1]);
+        maxY = Math.max(maxY, points[i + 1]);
+      }
+
+      setFinalBounds({
+        x: minX,
+        y: minY,
+        width: maxX - minX,
+        height: maxY - minY
+      });
+    }
+  }, [closed, points, finalBounds]);
+
+  const bounds = finalBounds || { x: 0, y: 0, width: 0, height: 0 };
+
+  // TODO  move to utils  
+  const center = useMemo(() => ({
+    x: bounds.x + bounds.width / 2,
+    y: bounds.y + bounds.height / 2,
+  }), [bounds]);
+
+  const rotatedAnchorCoords = anchorCoords.map(coord =>
+    rotatePoint(coord.x, coord.y, center.x, center.y, customRotation)
+  );
+
+  const rotatedCurveControlPoints = curveControlPoints.map(coord =>
+    rotatePoint(coord.x, coord.y, center.x, center.y, customRotation)
+  );
 
   return (
     <Group {...rest}>
@@ -146,15 +178,17 @@ export default function ShapeQCurveDrawer({
           y={bounds.y}
           width={bounds.width}
           height={bounds.height}
-          fill="transparent"
-          stroke="transparent"
-          strokeWidth={0}
-          draggable
+          fill="yellow"
+          draggable={false}
           onTransformEnd={onTransformEnd}
         />
       )}
       <Shape
         sceneFunc={(ctx, shape) => {
+          ctx.translate(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+          ctx.rotate(customRotation * Math.PI / 180);
+          ctx.translate(-bounds.x - bounds.width / 2, -bounds.y - bounds.height / 2);
+
           if (points.length < 4) return;
           ctx.beginPath();
           ctx.moveTo(points[0], points[1]);
@@ -178,7 +212,7 @@ export default function ShapeQCurveDrawer({
       />
 
       {/* TODO Check if Grouping anchors is better */}
-      {showAnchors && anchorCoords.map((coord, i) => (
+      {showAnchors && rotatedAnchorCoords.map((coord, i) => (
         <Circle
           key={i}
           x={coord.x}
@@ -192,7 +226,7 @@ export default function ShapeQCurveDrawer({
         />
       ))}
 
-      {showAnchors && curveControlPoints.length > 0 && curveControlPoints.map((coord, i) => (
+      {showAnchors && rotatedCurveControlPoints.length > 0 && rotatedCurveControlPoints.map((coord, i) => (
         <Circle
           key={i}
           x={coord.x}
