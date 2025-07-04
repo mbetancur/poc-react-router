@@ -1,6 +1,6 @@
 import type Konva from "konva";
-import { useMemo, useEffect, useState } from "react";
-import { Circle, Line, Group, Shape, Rect } from "react-konva";
+import { useMemo, useEffect, useState, useRef, forwardRef, useImperativeHandle } from "react";
+import { Circle, Line, Group, Shape  } from "react-konva";
 
 // TODO move to proper file
 export type Point = {
@@ -12,32 +12,33 @@ export const SNAP_DISTANCE = 20;
 export const MIN_POINTS_FOR_SNAP = 6;
 
 interface ShapeDrawerProps extends Konva.ShapeConfig {
-  currentMousePos?: Point | null;
+  currentMousePos: Point;
   onPointMove?: (i: number, newX: number, newY: number) => void;
   onShapeSelect?: () => void;
   onTransformEnd?: (e: Konva.KonvaEventObject<Event>) => void;
-  shapeRef?: React.RefObject<Konva.Rect>;
   showAnchors?: boolean;
   snapDistance?: number;
-  customRotation?: number;
 }
 
-export default function ShapeQCurveDrawer({
+const ShapeQCurveDrawer = forwardRef<Konva.Shape, ShapeDrawerProps>(({
   closed = false,
   currentMousePos,
-  customRotation = 0,
   onPointMove,
   onShapeSelect,
   onTransformEnd,
   points = [],
-  shapeRef,
   showAnchors = false,
   snapDistance = SNAP_DISTANCE,
   ...rest
-}: ShapeDrawerProps) {
+}, ref) => {
 
   const [curveControlPoints, setCurveControlPoints] = useState<Point[]>([]);
   const [finalBounds, setFinalBounds] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const shapeRefInternal = useRef<Konva.Shape>(null);
+
+  // Expose the internal shape ref to parent component
+  // TODO update forwardRef due deprecation
+  useImperativeHandle(ref, () => shapeRefInternal.current!, []);
 
   const calculatedAnchorQCurveCoords: Point[] = useMemo(() => {
     if (points.length < 4) return [];
@@ -56,6 +57,8 @@ export default function ShapeQCurveDrawer({
   useEffect(() => {
     setCurveControlPoints(calculatedAnchorQCurveCoords);
   }, [calculatedAnchorQCurveCoords]);
+
+  console
 
   const anchorCoords: Point[] = useMemo(() => {
     const coords: Point[] = [];
@@ -130,6 +133,7 @@ export default function ShapeQCurveDrawer({
     };
   }
 
+  // TODO remove or improve useEffect
   useEffect(() => {
     if (closed && !finalBounds && points.length >= 4) {
       let minX = points[0];
@@ -155,40 +159,28 @@ export default function ShapeQCurveDrawer({
 
   const bounds = finalBounds || { x: 0, y: 0, width: 0, height: 0 };
 
-  // TODO  move to utils  
-  const center = useMemo(() => ({
-    x: bounds.x + bounds.width / 2,
-    y: bounds.y + bounds.height / 2,
-  }), [bounds]);
-
-  const rotatedAnchorCoords = anchorCoords.map(coord =>
-    rotatePoint(coord.x, coord.y, center.x, center.y, customRotation)
-  );
-
-  const rotatedCurveControlPoints = curveControlPoints.map(coord =>
-    rotatePoint(coord.x, coord.y, center.x, center.y, customRotation)
-  );
+  // This is a workaround to get the bounds of the shape and pass it to the transformer
+  // TODO check if useEffect is needed
+  useEffect(() => {
+    if (shapeRefInternal.current) {
+      shapeRefInternal.current.getSelfRect = () => {
+        console.log('getSelfRect called, returning bounds:', bounds);
+        return {
+          x: bounds.x,
+          y: bounds.y,
+          width: bounds.width,
+          height: bounds.height
+        };
+      };
+    }
+  }, [bounds]);
 
   return (
     <Group {...rest}>
-      {closed && (
-        <Rect
-          ref={shapeRef}
-          x={bounds.x}
-          y={bounds.y}
-          width={bounds.width}
-          height={bounds.height}
-          fill="yellow"
-          draggable={false}
-          onTransformEnd={onTransformEnd}
-        />
-      )}
       <Shape
+        ref={shapeRefInternal}
         sceneFunc={(ctx, shape) => {
-          ctx.translate(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
-          ctx.rotate(customRotation * Math.PI / 180);
-          ctx.translate(-bounds.x - bounds.width / 2, -bounds.y - bounds.height / 2);
-
+          // TODO improve this part
           if (points.length < 4) return;
           ctx.beginPath();
           ctx.moveTo(points[0], points[1]);
@@ -209,10 +201,11 @@ export default function ShapeQCurveDrawer({
         stroke="blue"
         strokeWidth={2}
         onClick={() => onShapeSelect?.()}
+        onTransformEnd={onTransformEnd}
       />
 
       {/* TODO Check if Grouping anchors is better */}
-      {showAnchors && rotatedAnchorCoords.map((coord, i) => (
+      {showAnchors && anchorCoords.map((coord, i) => (
         <Circle
           key={i}
           x={coord.x}
@@ -226,7 +219,7 @@ export default function ShapeQCurveDrawer({
         />
       ))}
 
-      {showAnchors && rotatedCurveControlPoints.length > 0 && rotatedCurveControlPoints.map((coord, i) => (
+      {showAnchors && curveControlPoints.length > 0 && curveControlPoints.map((coord, i) => (
         <Circle
           key={i}
           x={coord.x}
@@ -253,13 +246,16 @@ export default function ShapeQCurveDrawer({
         />
       )}
 
-      {!closed && <Line
-        points={previewLinePoints}
-        stroke={shouldSnapToStart ? "green" : "red"}
-        strokeWidth={2}
-        dash={[5, 5]}
-      />}
+      {!closed &&
+        <Line
+          points={previewLinePoints}
+          stroke={shouldSnapToStart ? "green" : "red"}
+          strokeWidth={2}
+          dash={[5, 5]}
+        />}
 
     </Group >
   )
-}
+});
+
+export default ShapeQCurveDrawer;

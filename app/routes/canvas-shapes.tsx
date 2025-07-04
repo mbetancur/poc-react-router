@@ -1,5 +1,5 @@
 import type Konva from "konva";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type RefObject } from "react";
 import { Layer, Stage, Transformer, Image } from "react-konva";
 import useImage from "use-image";
 
@@ -16,7 +16,34 @@ const getCenter = (points: Point[]) => ({
   y: points.reduce((sum, p) => sum + p.y, 0) / points.length
 });
 
+type ShapeType = "qcurve" | "bcurve"; // Add more types as needed
+
+// TODO create custom hook to save info about the shape
+interface ShapeModel {
+  points: Point[];
+  rotation: number;
+  type: ShapeType;
+  colorSroke: string;
+  colorFill: string;
+  strokeWidth: number;
+  skewX: number; // TODO verify if this is needed
+  skewY: number; // TODO verify if this is needed
+  width: number;
+  height: number;
+  x: number;
+  y: number;
+  scaleX: number;
+  scaleY: number;
+  opacity: number;
+  visible: boolean;
+}
+
 export default function CanvasShapes() {
+
+  // TODO move to proper file, maybe a reducer - parent for this
+  const [shapes, setShapes] = useState<ShapeModel[]>([]);
+  const [selectedShape, setSelectedShape] = useState<ShapeModel | null>(null);
+
   const [currentMousePos, setCurrentMousePos] = useState<Point | null>(null);
   const [isShapeSelected, setIsShapeSelected] = useState(false);
   const [isShapeClosed, setIsShapeClosed] = useState(false);
@@ -24,7 +51,7 @@ export default function CanvasShapes() {
   const [rotation, setRotation] = useState(0);
 
   const transformerRef = useRef<Konva.Transformer>(null);
-  const shapeRef = useRef<Konva.Rect>(null);
+  const shapeRef = useRef<Konva.Shape>(null);
 
   const isDrawingStarted = useMemo(() => points.length > 0, [points]);
 
@@ -74,12 +101,12 @@ export default function CanvasShapes() {
   const handleTransformEnd = (e: Konva.KonvaEventObject<Event>) => {
     if (!isShapeClosed) return;
 
-    const node = e.target as Konva.Rect;
+    const node = e.target as Konva.Shape;
     const scaleX = node.scaleX();
     const scaleY = node.scaleY();
 
-    const rotation = node.getAbsoluteRotation();
-    setRotation(rotation)
+    // const rotation = node.getAbsoluteRotation();
+    // setRotation(rotation)
 
     // This is a workaround to reset the scale of the shape and set the new points after the transform resize
     node.scaleX(1);
@@ -118,17 +145,16 @@ export default function CanvasShapes() {
         /> */}
           {/* <Image x={1} y={0} image={mammImage} width={2400} height={1563} /> */}
           <ShapeQCurveDrawer
+            // TODO improve props + rest props  
+            ref={shapeRef}
             closed={isShapeClosed}
             currentMousePos={currentMousePos}
-            customRotation={rotation}
             draggable
             onPointMove={handlePointMove}
             onShapeSelect={handleShapeSelect}
             onTransformEnd={handleTransformEnd}
             points={points.flatMap(point => [point.x, point.y])}
-            shapeRef={shapeRef as React.RefObject<Konva.Rect>}
             showAnchors={!isShapeClosed || isShapeSelected}
-            snapDistance={SNAP_DISTANCE}
           />
 
           {/* DONT REMOVE YET first aprproach with Shapes no curves */}
@@ -152,12 +178,11 @@ export default function CanvasShapes() {
         /> */}
           {
             isShapeSelected && (
-              // FIXME bug in tranformer , creating extra space - check hitFunc vs sceneFunc
               <Transformer
                 ref={transformerRef}
                 padding={20}
                 boundBoxFunc={(oldBox, newBox) => {
-                  // Add max size
+                  // TODO Add max size
                   if (Math.abs(newBox.width) < 50 || Math.abs(newBox.height) < 50) {
                     return oldBox;
                   }
