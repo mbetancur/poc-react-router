@@ -4,11 +4,10 @@ import { Layer, Stage, Transformer, Image } from "react-konva";
 import useImage from "use-image";
 
 // TODO create Shape pattern for different shapes and properties
-import ShapeBCurveDrawer, { MIN_POINTS_FOR_SNAP, SNAP_DISTANCE, type Point } from "~/components/ShapeBCurveDrawer";
-import ShapeQCurveDrawer from "~/components/ShapeQCurveDrawer";
+import ShapeQCurveDrawer, { MIN_POINTS_FOR_SNAP, SNAP_DISTANCE, type Point } from "~/components/ShapeQCurveDrawer";
 
 // Utility functions
-const getDistance = (p1: Point, p2: Point) =>
+export const getDistanceBetweenPoints = (p1: Point, p2: Point) =>
   Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
 
 const getCenter = (points: Point[]) => ({
@@ -59,21 +58,24 @@ export default function CanvasShapes() {
     const pos = e?.target?.getStage()?.getPointerPosition();
     if (!pos || isShapeClosed) return;
 
-    if (points.length >= MIN_POINTS_FOR_SNAP / 2 && getDistance(points[0], pos) <= SNAP_DISTANCE) {
+    // TODO validate pos w/ zod or other
+    const point: Point = { x: pos.x, y: pos.y };
+
+    if (points.length > MIN_POINTS_FOR_SNAP && getDistanceBetweenPoints(points[0], point) <= SNAP_DISTANCE) {
       setPoints(prev => [...prev, points[0]]);
       setIsShapeClosed(true);
       setCurrentMousePos(null);
       return;
     }
 
-    setPoints(prev => [...prev, pos]);
+    setPoints(prev => [...prev, point]);
   };
 
   const handleMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
     if (!isDrawingStarted || isShapeClosed) return;
 
     const pos = e?.target?.getStage()?.getPointerPosition();
-    if (pos) setCurrentMousePos(pos);
+    if (pos) setCurrentMousePos({ x: pos.x, y: pos.y });
   };
 
   const handlePointMove = (i: number, newX: number, newY: number) => {
@@ -134,7 +136,7 @@ export default function CanvasShapes() {
         <Layer>
           {/* <ShapeBCurveDrawer
           ref={shapeRef}
-          points={points.flatMap(point => [point.x, point.y])}
+          points={points}
           currentMousePos={currentMousePos}
           snapDistance={SNAP_DISTANCE}
           isShapeClosed={isShapeClosed}
@@ -153,14 +155,14 @@ export default function CanvasShapes() {
             onPointMove={handlePointMove}
             onShapeSelect={handleShapeSelect}
             onTransformEnd={handleTransformEnd}
-            points={points.flatMap(point => [point.x, point.y])}
+            points={points}
             showAnchors={!isShapeClosed || isShapeSelected}
           />
 
           {/* DONT REMOVE YET first aprproach with Shapes no curves */}
           {/* <ShapeDrawer
           ref={shapeRef}
-          points={points.flatMap(point => [point.x, point.y])}
+          points={points}
           currentMousePos={currentMousePos}
           snapDistance={SNAP_DISTANCE}
           isShapeClosed={isShapeClosed}
@@ -172,7 +174,7 @@ export default function CanvasShapes() {
         // check onDragEnd event
         // onPointsChange={() => {
         //   if (shapeRef.current) {
-        //     shapeRef.current.points(points.flatMap(point => [point.x, point.y]));
+        //     shapeRef.current.points(points);
         //   }
         // }}
         /> */}
