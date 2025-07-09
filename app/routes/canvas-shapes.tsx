@@ -182,16 +182,16 @@ export default function CanvasShapes() {
           {/* <Image x={1} y={0} image={mammImage} width={2400} height={1563} /> */}
           <ShapeQCurveDrawer
             // TODO improve props + rest props  
-            ref={shapeRef}
             closed={isShapeClosed}
             currentMousePos={currentMousePos}
             curveControlPoints={curveControlPoints}
             draggable
-            onPointMove={handlePointMove}
             onCurveControlMove={handleCurveControlMove}
+            onPointMove={handlePointMove}
             onShapeSelect={handleShapeSelect}
             onTransformEnd={handleTransformEnd}
             points={points}
+            ref={shapeRef}
             showAnchors={!isShapeClosed || isShapeSelected}
           />
 

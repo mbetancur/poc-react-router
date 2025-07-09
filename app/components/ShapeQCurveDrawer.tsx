@@ -1,5 +1,5 @@
 import type Konva from "konva";
-import { useMemo, useEffect, useState, useRef, forwardRef, useImperativeHandle } from "react";
+import { useMemo, useEffect, useState, useRef } from "react";
 import { Circle, Line, Group, Shape } from "react-konva";
 import { getDistanceBetweenPoints } from "~/routes/canvas-shapes";
 
@@ -13,17 +13,18 @@ export const SNAP_DISTANCE = 20;
 export const MIN_POINTS_FOR_SNAP = 2;
 
 interface ShapeDrawerProps extends Konva.ShapeConfig {
-  currentMousePos: Point;
+  currentMousePos: Point | null;
   curveControlPoints: Point[];
   onCurveControlMove?: (i: number, newX: number, newY: number) => void;
   onPointMove?: (i: number, newX: number, newY: number) => void;
   onShapeSelect?: () => void;
   onTransformEnd?: (e: Konva.KonvaEventObject<Event>) => void;
+  ref?: React.RefObject<Konva.Shape | null>;
   showAnchors?: boolean;
   snapDistance?: number;
 }
 
-const ShapeQCurveDrawer = forwardRef<Konva.Shape, ShapeDrawerProps>(({
+const ShapeQCurveDrawer = ({
   closed = false,
   currentMousePos,
   curveControlPoints,
@@ -32,17 +33,13 @@ const ShapeQCurveDrawer = forwardRef<Konva.Shape, ShapeDrawerProps>(({
   onShapeSelect,
   onTransformEnd,
   points = [],
+  ref,
   showAnchors = false,
   snapDistance = SNAP_DISTANCE,
   ...rest
-}, ref) => {
+}: ShapeDrawerProps) => {
 
   const [finalBounds, setFinalBounds] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
-  const shapeRefInternal = useRef<Konva.Shape>(null);
-
-  // Expose the internal shape ref to parent component
-  // TODO update forwardRef due deprecation
-  useImperativeHandle(ref, () => shapeRefInternal.current!, []);
 
   //TODO consider removing this useMemo
   const anchorCoords: Point[] = useMemo(() => {
@@ -135,8 +132,8 @@ const ShapeQCurveDrawer = forwardRef<Konva.Shape, ShapeDrawerProps>(({
   // This is a workaround to get the bounds of the shape and pass it to the transformer
   // TODO check if useEffect is needed
   useEffect(() => {
-    if (shapeRefInternal.current) {
-      shapeRefInternal.current.getSelfRect = () => {
+    if (ref?.current) {
+      ref.current.getSelfRect = () => {
         return {
           x: bounds.x,
           y: bounds.y,
@@ -145,12 +142,12 @@ const ShapeQCurveDrawer = forwardRef<Konva.Shape, ShapeDrawerProps>(({
         };
       };
     }
-  }, [bounds]);
+  }, [bounds, ref]);
 
   return (
     <Group {...rest}>
       <Shape
-        ref={shapeRefInternal}
+        ref={ref}
         sceneFunc={(ctx, shape) => {
           // TODO improve this part
           if (points.length < 2) return;
@@ -226,6 +223,6 @@ const ShapeQCurveDrawer = forwardRef<Konva.Shape, ShapeDrawerProps>(({
 
     </Group >
   )
-});
+};
 
 export default ShapeQCurveDrawer;
