@@ -1,6 +1,6 @@
 import type Konva from "konva";
 import { useMemo, useEffect, useState, useRef, forwardRef, useImperativeHandle } from "react";
-import { Circle, Line, Group, Shape  } from "react-konva";
+import { Circle, Line, Group, Shape } from "react-konva";
 import { getDistanceBetweenPoints } from "~/routes/canvas-shapes";
 
 // TODO move to proper file
@@ -14,10 +14,11 @@ export const MIN_POINTS_FOR_SNAP = 2;
 
 interface ShapeDrawerProps extends Konva.ShapeConfig {
   currentMousePos: Point;
+  curveControlPoints: Point[];
+  onCurveControlMove?: (i: number, newX: number, newY: number) => void;
   onPointMove?: (i: number, newX: number, newY: number) => void;
   onShapeSelect?: () => void;
   onTransformEnd?: (e: Konva.KonvaEventObject<Event>) => void;
-  points?: Point[];
   showAnchors?: boolean;
   snapDistance?: number;
 }
@@ -25,6 +26,8 @@ interface ShapeDrawerProps extends Konva.ShapeConfig {
 const ShapeQCurveDrawer = forwardRef<Konva.Shape, ShapeDrawerProps>(({
   closed = false,
   currentMousePos,
+  curveControlPoints,
+  onCurveControlMove,
   onPointMove,
   onShapeSelect,
   onTransformEnd,
@@ -34,7 +37,6 @@ const ShapeQCurveDrawer = forwardRef<Konva.Shape, ShapeDrawerProps>(({
   ...rest
 }, ref) => {
 
-  const [curveControlPoints, setCurveControlPoints] = useState<Point[]>([]);
   const [finalBounds, setFinalBounds] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const shapeRefInternal = useRef<Konva.Shape>(null);
 
@@ -42,28 +44,9 @@ const ShapeQCurveDrawer = forwardRef<Konva.Shape, ShapeDrawerProps>(({
   // TODO update forwardRef due deprecation
   useImperativeHandle(ref, () => shapeRefInternal.current!, []);
 
-  const calculateAnchorQCurveCoords: Point[] = useMemo(() => {
-    if (points.length < 2) return [];
-    const coords: Point[] = [];
-    for (let i = 0; i < points.length - 1; i++) {
-      const startPoint = points[i];
-      const endPoint = points[i + 1];
-      const curveControlPoint: Point = {
-        x: (startPoint.x + endPoint.x) / 2, 
-        y: (startPoint.y + endPoint.y) / 2 
-      };
-      coords.push(curveControlPoint);
-    }
-    return coords;
-  }, [points]);
-
-  useEffect(() => {
-    setCurveControlPoints(calculateAnchorQCurveCoords);
-  }, [calculateAnchorQCurveCoords]);
-
   //TODO consider removing this useMemo
   const anchorCoords: Point[] = useMemo(() => {
-    return [...points]; 
+    return [...points];
   }, [points]);
 
   const shouldSnapToStart: boolean = useMemo(() => {
@@ -103,14 +86,10 @@ const ShapeQCurveDrawer = forwardRef<Konva.Shape, ShapeDrawerProps>(({
   };
 
   const handleQCurveCircleDragEnd = (i: number, e: Konva.KonvaEventObject<MouseEvent>) => {
-    if (closed) {
+    if (onCurveControlMove && closed) {
       const newX = e.target.x();
       const newY = e.target.y();
-      setCurveControlPoints(prev => {
-        const newPoints = [...prev];
-        newPoints[i] = { x: newX, y: newY };
-        return newPoints;
-      });
+      onCurveControlMove(i, newX, newY);
     }
   };
 
@@ -178,13 +157,10 @@ const ShapeQCurveDrawer = forwardRef<Konva.Shape, ShapeDrawerProps>(({
           ctx.beginPath();
           ctx.moveTo(points[0].x, points[0].y);
           for (let i = 0; i < points.length - 1; i++) {
-            const currentPoint = points[i];
             const nextPoint = points[i + 1];
             const controlPoint = curveControlPoints[i];
             if (controlPoint) {
               ctx.quadraticCurveTo(controlPoint.x, controlPoint.y, nextPoint.x, nextPoint.y);
-            } else {
-              ctx.lineTo(nextPoint.x, nextPoint.y);
             }
           }
 
@@ -213,7 +189,7 @@ const ShapeQCurveDrawer = forwardRef<Konva.Shape, ShapeDrawerProps>(({
         />
       ))}
 
-      {showAnchors && curveControlPoints.length > 0 && curveControlPoints.map((coord, i) => (
+      {showAnchors && curveControlPoints.length > 0 && curveControlPoints.map((coord: Point, i: number) => (
         <Circle
           key={i}
           x={coord.x}

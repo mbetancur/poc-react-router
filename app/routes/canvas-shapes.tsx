@@ -1,5 +1,5 @@
 import type Konva from "konva";
-import { useMemo, useRef, useState, type RefObject } from "react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { Layer, Stage, Transformer, Image } from "react-konva";
 import useImage from "use-image";
 
@@ -7,7 +7,7 @@ import useImage from "use-image";
 import ShapeQCurveDrawer, { MIN_POINTS_FOR_SNAP, SNAP_DISTANCE, type Point } from "~/components/ShapeQCurveDrawer";
 
 // Utility functions
-export const getDistanceBetweenPoints = (p1: Point, p2: Point) =>
+export const getDistanceBetweenPoints = (p1: Point, p2: Point): number =>
   Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
 
 const getCenter = (points: Point[]) => ({
@@ -15,11 +15,19 @@ const getCenter = (points: Point[]) => ({
   y: points.reduce((sum, p) => sum + p.y, 0) / points.length
 });
 
+const getCurveControlPoint = (point: Point, secondPoint: Point): Point => {
+  return {
+    x: (point.x + secondPoint.x) / 2,
+    y: (point.y + secondPoint.y) / 2
+  }
+}
+
 type ShapeType = "qcurve" | "bcurve"; // Add more types as needed
 
 // TODO create custom hook to save info about the shape
 interface ShapeModel {
   points: Point[];
+  controlPoints: Point[];
   rotation: number;
   type: ShapeType;
   colorSroke: string;
@@ -47,12 +55,27 @@ export default function CanvasShapes() {
   const [isShapeSelected, setIsShapeSelected] = useState(false);
   const [isShapeClosed, setIsShapeClosed] = useState(false);
   const [points, setPoints] = useState<Point[]>([]);
+  const [curveControlPoints, setCurveControlPoints] = useState<Point[]>([]);
   const [rotation, setRotation] = useState(0);
 
   const transformerRef = useRef<Konva.Transformer>(null);
   const shapeRef = useRef<Konva.Shape>(null);
 
   const isDrawingStarted = useMemo(() => points.length > 0, [points]);
+
+  // TODO Verify if we want to move the curve control points every time the points change
+  // TODO why is react triggerin setPoints twice?
+  useEffect(() => {
+    if (points.length >= 2) {
+      const newControlPoints: Point[] = [];
+      for (let i = 0; i < points.length - 1; i++) {
+        newControlPoints.push(getCurveControlPoint(points[i + 1], points[i]));
+      }
+      setCurveControlPoints(newControlPoints);
+    } else {
+      setCurveControlPoints([]);
+    }
+  }, [points]);
 
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
     const pos = e?.target?.getStage()?.getPointerPosition();
@@ -70,6 +93,7 @@ export default function CanvasShapes() {
 
     setPoints(prev => [...prev, point]);
   };
+
 
   const handleMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
     if (!isDrawingStarted || isShapeClosed) return;
@@ -92,6 +116,16 @@ export default function CanvasShapes() {
       return newPoints;
     });
   };
+
+  const handleCurveControlMove = (i: number, newX: number, newY: number) => {
+    if (!isShapeClosed) return;
+
+    setCurveControlPoints(prev => {
+      const newPoints = [...prev];
+      newPoints[i] = { x: newX, y: newY };
+      return newPoints;
+    });
+  }
 
   const handleShapeSelect = () => {
     if (transformerRef.current && shapeRef.current) {
@@ -151,8 +185,10 @@ export default function CanvasShapes() {
             ref={shapeRef}
             closed={isShapeClosed}
             currentMousePos={currentMousePos}
+            curveControlPoints={curveControlPoints}
             draggable
             onPointMove={handlePointMove}
+            onCurveControlMove={handleCurveControlMove}
             onShapeSelect={handleShapeSelect}
             onTransformEnd={handleTransformEnd}
             points={points}
