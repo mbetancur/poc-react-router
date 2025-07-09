@@ -1,5 +1,5 @@
 import type Konva from "konva";
-import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Layer, Stage, Transformer, Image } from "react-konva";
 import useImage from "use-image";
 
@@ -25,7 +25,7 @@ const getCurveControlPoint = (point: Point, secondPoint: Point): Point => {
 type ShapeType = "qcurve" | "bcurve"; // Add more types as needed
 
 // TODO create custom hook to save info about the shape
-interface ShapeModel {
+export interface ShapeModel {
   points: Point[];
   controlPoints: Point[];
   rotation: number;
@@ -63,8 +63,8 @@ export default function CanvasShapes() {
 
   const isDrawingStarted = useMemo(() => points.length > 0, [points]);
 
-  // TODO Verify if we want to move the curve control points every time the points change
-  // TODO why is react triggerin setPoints twice?
+  // TODO Validate if we want to move the curve control points every time the points change
+  // TODO why is react triggerin setPoints twice? WTF!
   useEffect(() => {
     if (points.length >= 2) {
       const newControlPoints: Point[] = [];
@@ -127,34 +127,78 @@ export default function CanvasShapes() {
     });
   }
 
-  const handleShapeSelect = () => {
+  const selectShapeWithTransformer = () => {
     if (transformerRef.current && shapeRef.current) {
       transformerRef.current.nodes([shapeRef.current]);
     }
+  }
+
+  const handleShapeSelect = () => {
+    selectShapeWithTransformer()
     setIsShapeSelected(true);
+  };
+
+  const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (e.target === e.target.getStage() && isShapeSelected && isShapeClosed) {
+      setIsShapeSelected(false);
+      if (transformerRef.current) {
+        transformerRef.current.nodes([]);
+      }
+    }
   };
 
   const handleTransformEnd = (e: Konva.KonvaEventObject<Event>) => {
     if (!isShapeClosed) return;
-
     const node = e.target as Konva.Shape;
-    const scaleX = node.scaleX();
-    const scaleY = node.scaleY();
 
-    // const rotation = node.getAbsoluteRotation();
-    // setRotation(rotation)
+    const rotation = node.getAbsoluteRotation();
+    setRotation(rotation)
+    const transform = node._getAbsoluteTransform();
+    console.log("node.getAbsolutePosition", node.getAbsolutePosition());
+    console.log("transform", transform);
+    console.log("node.position", node.position());
 
-    // This is a workaround to reset the scale of the shape and set the new points after the transform resize
+    // Get the transformation matrix
+    const transformMatrix = transform.getMatrix();
+    console.log("transformMatrix", transformMatrix);
+
+    // Transform all points using Konva's transformation matrix
+    const newPoints = points.map((point, index) => {
+      // Use Konva's transformPoint method to transform each point
+      const transformedPoint = transform.point({ x: point.x, y: point.y });
+
+      console.log(`Point ${index}:`, {
+        original: point,
+        transformed: transformedPoint
+      });
+
+      return { x: transformedPoint.x, y: transformedPoint.y };
+    });
+
+    console.log("All original points:", points);
+    console.log("All transformed points:", newPoints);
+
+    // TODO verify if all these are needed
+    // Reset the node's transformation to prevent cumulative transformations
     node.scaleX(1);
     node.scaleY(1);
-
-    const center = getCenter(points);
-    const newPoints = points.map(point => ({
-      x: center.x + (point.x - center.x) * scaleX,
-      y: center.y + (point.y - center.y) * scaleY
-    }));
+    node.rotation(0);
+    node.x(0);
+    node.y(0);
 
     setPoints(newPoints);
+
+    console.log("points", points);
+
+    // TODO Verify if this is better than transform point as points above
+    if (newPoints.length >= 2) {
+      const newControlPoints: Point[] = [];
+      for (let i = 0; i < newPoints.length - 1; i++) {
+        newControlPoints.push(getCurveControlPoint(newPoints[i + 1], newPoints[i]));
+      }
+      setCurveControlPoints(newControlPoints);
+    }
+
   };
   // const [mammImage] = useImage('./testmap.png');
 
@@ -166,6 +210,7 @@ export default function CanvasShapes() {
         height={1000}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
+        onClick={handleStageClick}
       >
         <Layer>
           {/* <ShapeBCurveDrawer
@@ -188,6 +233,7 @@ export default function CanvasShapes() {
             draggable
             onCurveControlMove={handleCurveControlMove}
             onPointMove={handlePointMove}
+            onRestartTransformer={selectShapeWithTransformer}
             onShapeSelect={handleShapeSelect}
             onTransformEnd={handleTransformEnd}
             points={points}

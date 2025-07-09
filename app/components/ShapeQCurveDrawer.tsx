@@ -1,7 +1,7 @@
 import type Konva from "konva";
-import { useMemo, useEffect, useState, useRef } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { Circle, Line, Group, Shape } from "react-konva";
-import { getDistanceBetweenPoints } from "~/routes/canvas-shapes";
+import { getDistanceBetweenPoints, type ShapeModel } from "~/routes/canvas-shapes";
 
 // TODO move to proper file
 export type Point = {
@@ -17,6 +17,7 @@ interface ShapeDrawerProps extends Konva.ShapeConfig {
   curveControlPoints: Point[];
   onCurveControlMove?: (i: number, newX: number, newY: number) => void;
   onPointMove?: (i: number, newX: number, newY: number) => void;
+  onRestartTransformer?: () => void;
   onShapeSelect?: () => void;
   onTransformEnd?: (e: Konva.KonvaEventObject<Event>) => void;
   ref?: React.RefObject<Konva.Shape | null>;
@@ -30,6 +31,7 @@ const ShapeQCurveDrawer = ({
   curveControlPoints,
   onCurveControlMove,
   onPointMove,
+  onRestartTransformer,
   onShapeSelect,
   onTransformEnd,
   points = [],
@@ -39,8 +41,6 @@ const ShapeQCurveDrawer = ({
   ...rest
 }: ShapeDrawerProps) => {
 
-  const [finalBounds, setFinalBounds] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
-
   //TODO consider removing this useMemo
   const anchorCoords: Point[] = useMemo(() => {
     return [...points];
@@ -48,7 +48,7 @@ const ShapeQCurveDrawer = ({
 
   const shouldSnapToStart: boolean = useMemo(() => {
     // TODO set a max number of points
-    if (!currentMousePos || points.length < MIN_POINTS_FOR_SNAP || closed) return false;
+    if (!currentMousePos || points.length < MIN_POINTS_FOR_SNAP + 1 || closed) return false;
 
     const initialPoint = points[0];
     const distance = getDistanceBetweenPoints(currentMousePos, initialPoint);
@@ -90,59 +90,50 @@ const ShapeQCurveDrawer = ({
     }
   };
 
-  function rotatePoint(x: number, y: number, cx: number, cy: number, angleDeg: number) {
-    // TODO  move to utils  
-    const angleRad = angleDeg * Math.PI / 180;
-    const cos = Math.cos(angleRad);
-    const sin = Math.sin(angleRad);
-    const dx = x - cx;
-    const dy = y - cy;
-    return {
-      x: cx + dx * cos - dy * sin,
-      y: cy + dx * sin + dy * cos,
-    };
-  }
+  type ShapeBounds = Pick<ShapeModel, "x" | "y" | "width" | "height">;
 
-  // TODO remove or improve useEffect
-  useEffect(() => {
-    if (closed && !finalBounds && points.length >= 2) {
-      let minX = points[0].x;
-      let maxX = points[0].x;
-      let minY = points[0].y;
-      let maxY = points[0].y;
-
-      for (let i = 0; i < points.length; i++) {
-        minX = Math.min(minX, points[i].x);
-        maxX = Math.max(maxX, points[i].x);
-        minY = Math.min(minY, points[i].y);
-        maxY = Math.max(maxY, points[i].y);
-      }
-
-      setFinalBounds({
-        x: minX,
-        y: minY,
-        width: maxX - minX,
-        height: maxY - minY
-      });
+  const calculateShapeBounds: ShapeBounds = useMemo(() => {
+    if (!closed || points.length < 2) {
+      return { x: 0, y: 0, width: 0, height: 0 };
     }
-  }, [closed, points, finalBounds]);
+    const allPoints = [...points, ...curveControlPoints];
 
-  const bounds = finalBounds || { x: 0, y: 0, width: 0, height: 0 };
+    let minX = allPoints[0].x;
+    let maxX = allPoints[0].x;
+    let minY = allPoints[0].y;
+    let maxY = allPoints[0].y;
+
+    for (const point of allPoints) {
+      minX = Math.min(minX, point.x);
+      maxX = Math.max(maxX, point.x);
+      minY = Math.min(minY, point.y);
+      maxY = Math.max(maxY, point.y);
+    }
+
+    return {
+      x: minX,
+      y: minY,
+      width: maxX - minX,
+      height: maxY - minY
+    };
+  }, [closed, points, curveControlPoints]);
 
   // This is a workaround to get the bounds of the shape and pass it to the transformer
   // TODO check if useEffect is needed
   useEffect(() => {
+    console.log("Pos", ref?.current?.getSelfRect());
     if (ref?.current) {
       ref.current.getSelfRect = () => {
         return {
-          x: bounds.x,
-          y: bounds.y,
-          width: bounds.width,
-          height: bounds.height
+          x: calculateShapeBounds.x,
+          y: calculateShapeBounds.y,
+          width: calculateShapeBounds.width,
+          height: calculateShapeBounds.height
         };
       };
     }
-  }, [bounds, ref]);
+    onRestartTransformer?.();
+  }, [calculateShapeBounds, ref]);
 
   return (
     <Group {...rest}>
