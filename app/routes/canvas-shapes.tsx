@@ -10,7 +10,7 @@ import ShapeQCurveDrawer, { MIN_POINTS_FOR_SNAP, SNAP_DISTANCE, type Point } fro
 export const getDistanceBetweenPoints = (p1: Point, p2: Point): number =>
   Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
 
-const getCenter = (points: Point[]) => ({
+export const getCenter = (points: Point[]) => ({
   x: points.reduce((sum, p) => sum + p.x, 0) / points.length,
   y: points.reduce((sum, p) => sum + p.y, 0) / points.length
 });
@@ -27,7 +27,7 @@ type ShapeType = "qcurve" | "bcurve"; // Add more types as needed
 // TODO create custom hook to save info about the shape
 export interface ShapeModel {
   points: Point[];
-  controlPoints: Point[];
+  controlPoints: Point[]; // curvePoints
   rotation: number;
   type: ShapeType;
   colorSroke: string;

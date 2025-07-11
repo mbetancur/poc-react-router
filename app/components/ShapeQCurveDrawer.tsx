@@ -1,6 +1,6 @@
 import type Konva from "konva";
-import { useMemo, useEffect, useState } from "react";
-import { Circle, Line, Group, Shape } from "react-konva";
+import { useMemo, useEffect, useRef } from "react";
+import { Circle, Line, Group, Shape, Text } from "react-konva";
 import { getDistanceBetweenPoints, type ShapeModel } from "~/routes/canvas-shapes";
 
 // TODO move to proper file
@@ -20,6 +20,7 @@ interface ShapeDrawerProps extends Konva.ShapeConfig {
   onRestartTransformer?: () => void;
   onShapeSelect?: () => void;
   onTransformEnd?: (e: Konva.KonvaEventObject<Event>) => void;
+  points: Point[]
   ref?: React.RefObject<Konva.Shape | null>;
   showAnchors?: boolean;
   snapDistance?: number;
@@ -40,6 +41,8 @@ const ShapeQCurveDrawer = ({
   snapDistance = SNAP_DISTANCE,
   ...rest
 }: ShapeDrawerProps) => {
+
+  const textRef = useRef<Konva.Text>(null);
 
   //TODO consider removing this useMemo
   const anchorCoords: Point[] = useMemo(() => {
@@ -91,6 +94,55 @@ const ShapeQCurveDrawer = ({
   };
 
   type ShapeBounds = Pick<ShapeModel, "x" | "y" | "width" | "height">;
+
+  type TextBounds = Pick<ShapeModel, "width" | "height">;
+
+  const textDragBoundFunc = (pos: Point): Point => {
+    if (ref?.current && textRef.current) {
+      if (ref.current.intersects(pos)) {
+        return pos;
+      }
+      return textRef.current.position();
+    }
+    return pos;
+  };
+
+  const textCenter: Point = useMemo(() => {
+    if (!closed || points.length < 2 || !ref?.current) {
+      return { x: 0, y: 0 };
+    }
+    // These math constants are used to calculate the center of the shape
+    const areaConstant = 0.5
+    const centerConstant = 6
+
+    let areaSum = 0;
+    let sumCenterX = 0;
+    let sumCenterY = 0;
+    for (let i = 0; i < points.length - 1; i++) {
+      const { x, y } = points[i];
+      const { x: x1, y: y1 } = points[i + 1];
+
+      areaSum = (x * y1) - (x1 * y) + areaSum;
+
+      sumCenterX = (x + x1) * (x * y1 - x1 * y) + sumCenterX;
+      sumCenterY = (y + y1) * (x * y1 - x1 * y) + sumCenterY
+    }
+    const area = areaConstant * areaSum;
+    const centerX = sumCenterX / (centerConstant * area);
+    const centerY = sumCenterY / (centerConstant * area);
+
+    return { x: centerX, y: centerY };
+  }, [closed, points, curveControlPoints, ref]);
+
+  const textDimensions: TextBounds = useMemo(() => {
+    if (textRef.current) {
+      return {
+        width: textRef.current.width(),
+        height: textRef.current.height()
+      };
+    }
+    return { width: 0, height: 0 };
+  }, [textRef, closed, points, curveControlPoints]);
 
   const calculateShapeBounds: ShapeBounds = useMemo(() => {
     if (!closed || points.length < 2) {
@@ -211,6 +263,23 @@ const ShapeQCurveDrawer = ({
           strokeWidth={2}
           dash={[5, 5]}
         />}
+
+      {closed && (
+        <Text
+          // align="center"
+          // verticalAlign="middle"
+          draggable={closed}
+          dragBoundFunc={textDragBoundFunc}
+          fill="white"
+          fontSize={12} //TODO Calculate font size based on the text length and shape size
+          offsetX={textDimensions.width / 2}
+          offsetY={textDimensions.height / 2}
+          ref={textRef}
+          text="Opportunity name"
+          x={textCenter.x}
+          y={textCenter.y}
+        />
+      )}
 
     </Group >
   )
