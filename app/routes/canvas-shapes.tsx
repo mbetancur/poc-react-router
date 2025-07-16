@@ -230,7 +230,7 @@ export default function CanvasShapes() {
             closed={isShapeClosed}
             currentMousePos={currentMousePos}
             curveControlPoints={curveControlPoints}
-            draggable
+            draggable={isShapeClosed}
             onCurveControlMove={handleCurveControlMove}
             onPointMove={handlePointMove}
             onRestartTransformer={selectShapeWithTransformer}

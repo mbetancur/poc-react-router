@@ -173,7 +173,6 @@ const ShapeQCurveDrawer = ({
   // This is a workaround to get the bounds of the shape and pass it to the transformer
   // TODO check if useEffect is needed
   useEffect(() => {
-    console.log("Pos", ref?.current?.getSelfRect());
     if (ref?.current) {
       ref.current.getSelfRect = () => {
         return {
