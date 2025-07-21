@@ -3,7 +3,7 @@ import { useRef, type RefObject } from "react";
 import { Layer, Stage, Transformer } from "react-konva";
 import { useCanvasReducer } from "~/hooks/useCanvasReducer";
 import ShapeRenderer from "~/components/shapes/ShapeRenderer";
-import DrawingToolbar from "~/components/DrawingToolbar";
+import DrawingPanel from "~/components/DrawingPanel";
 import type { Point } from "~/types/canvas";
 import { shouldSnapToStart } from "~/utils/shapeFactory";
 
@@ -140,20 +140,13 @@ export default function CanvasShapesNew() {
   };
 
   const restartTransformer = (selectedShapeRef: RefObject<Konva.Shape>) => {
-    console.log(selectedShapeRef)
     if (transformerRef.current && selectedShapeRef.current && selectedShape) {
       transformerRef.current.nodes([selectedShapeRef.current]);
     }
   };
 
   return (
-    <div className="flex flex-col h-screen">
-      <DrawingToolbar
-        currentMode={state.drawingMode}
-        onModeChange={setDrawingMode}
-        onClearCanvas={clearCanvas}
-      />
-
+    <div className="flex h-screen">
       <div className="flex-1 overflow-hidden">
         <Stage
           // TODO set variables for these size values
@@ -204,11 +197,17 @@ export default function CanvasShapesNew() {
           </Layer>
         </Stage>
       </div>
+      
+      <DrawingPanel
+        currentMode={state.drawingMode}
+        onModeChange={setDrawingMode}
+        onClearCanvas={clearCanvas}
+      />
 
       {/* TODO create a component */}
       {/* Dev info */}
       {process.env.NODE_ENV === 'development' && (
-        <div className="p-2 bg-gray-800 text-white text-xs">
+        <div className="bg-gray-800 text-white text-xs">
           <div>Cursor position  x: {state.currentMousePos?.x} y: {state.currentMousePos?.y}</ div>
           <div>Mode: {state.drawingMode}</div>
           <div>Shapes: {allShapes.length}</div>

@@ -234,7 +234,7 @@ export const canvasReducer = (state: CanvasState, action: CanvasAction): CanvasS
       return {
         ...state,
         drawingMode: mode,
-        activeDrawingShape: null, // Cancel any active drawing when changing modes
+        activeDrawingShape: null,
         selectedShapeId: mode === 'select' ? state.selectedShapeId : null,
       };
     }
