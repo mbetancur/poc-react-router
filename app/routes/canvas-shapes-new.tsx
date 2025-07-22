@@ -52,8 +52,8 @@ export default function CanvasShapesNew() {
     }
 
     if (!isDrawing) {
-      if (state.drawingMode === 'rectangle') {
-        startDrawing('rectangle', point);
+      if (state.drawingMode === 'linepolygon') {
+        startDrawing('linepolygon', point);
         completeShape();
       } else {
         startDrawing(state.drawingMode, point);
@@ -116,8 +116,8 @@ export default function CanvasShapesNew() {
       node.y(0);
 
       transformShape(shapeId, { points: transformedPoints });
-    } else if (shape.type === "rectangle") {
-      // For rectangles, handle position and scale changes
+    } else if (shape.type === "linepolygon") {
+      // For regular polygons, handle position and scale changes
       const rotation = node.getAbsoluteRotation();
       const scale = node.getAbsoluteScale();
       const position = node.getAbsolutePosition();
@@ -132,8 +132,7 @@ export default function CanvasShapesNew() {
       transformShape(shapeId, {
         x: position.x,
         y: position.y,
-        width: shape.width * scale.x,
-        height: shape.height * scale.y,
+        points: shape.points,
         rotation: rotation,
       });
     }
@@ -197,7 +196,7 @@ export default function CanvasShapesNew() {
           </Layer>
         </Stage>
       </div>
-      
+
       <DrawingPanel
         currentMode={state.drawingMode}
         onModeChange={setDrawingMode}

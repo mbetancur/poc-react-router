@@ -65,7 +65,7 @@ export const canvasReducer = (state: CanvasState, action: CanvasAction): CanvasS
 
           return {
             ...state,
-            shapes: state.shapes.set(shape.id, updatedShape),
+            shapes: new Map(state.shapes).set(shape.id, updatedShape),
             activeDrawingShape: null,
             selectedShapeId: shape.id,
           };
@@ -106,18 +106,18 @@ export const canvasReducer = (state: CanvasState, action: CanvasAction): CanvasS
       }
 
       const shape = state.activeDrawingShape;
-      console.log('Reducer COMPLETE', shape)
 
-      if (shape.type === "rectangle") {
+      if (shape.type === "linepolygon") {
         return {
           ...state,
-          shapes: state.shapes.set(shape.id, shape),
+          shapes: new Map(state.shapes).set(shape.id, shape),
           activeDrawingShape: null,
           selectedShapeId: shape.id,
         };
       }
 
       // TODO Consider removing this due Completion of curves is done manually
+      // or extend this method to complete all kind of shapes
       if ((shape.type === "qcurve" || shape.type === "bcurve") && shape.points.length >= 3) {
         const updatedShape: ShapeModel = {
           ...shape,
@@ -167,18 +167,20 @@ export const canvasReducer = (state: CanvasState, action: CanvasAction): CanvasS
         return state;
       }
 
+      if (existingShape.type === "qcurve" && updates?.points) {
+        updates.controlPoints = calculateQCurveControlPoints(updates?.points);
+      }
+
       const updatedShape: ShapeModel = {
         ...existingShape,
         ...updates,
         modified: Date.now(),
       };
 
-      const newShapes = new Map(state.shapes);
-      newShapes.set(shapeId, updatedShape);
 
       return {
         ...state,
-        shapes: newShapes,
+        shapes: new Map(state.shapes).set(shapeId, updatedShape),
       };
     }
 
@@ -207,12 +209,9 @@ export const canvasReducer = (state: CanvasState, action: CanvasAction): CanvasS
         } as ShapeModel;
       }
 
-      const newShapes = new Map(state.shapes);
-      newShapes.set(shapeId, updatedShape);
-
       return {
         ...state,
-        shapes: newShapes,
+        shapes: new Map(state.shapes).set(shapeId, updatedShape),
       };
     }
 

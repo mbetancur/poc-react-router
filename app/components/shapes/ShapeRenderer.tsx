@@ -2,7 +2,7 @@ import type Konva from "konva";
 import { useRef, type RefObject } from "react";
 import type { ShapeModel, Point } from "~/types/canvas";
 import QCurveShape from "./QCurveShape";
-import RectangleShape from "./RectangleShape";
+import LinePolygonShape from "./LinePolygonShape";
 
 interface ShapeRendererProps {
   shape: ShapeModel;
@@ -26,7 +26,7 @@ const ShapeRenderer = ({
   onRestartTransformer,
 }: ShapeRendererProps) => {
 
-  const shapeRef = useRef<Konva.Shape>(null);
+  const shapeRef = useRef<Konva.Line | null>(null);
 
   const handleTransformEnd = (e: Konva.KonvaEventObject<Event>) => {
     if (!onShapeUpdate) return;
@@ -55,7 +55,7 @@ const ShapeRenderer = ({
       node.y(0);
 
       onShapeUpdate({ points: transformedPoints, controlPoints: transformedControlPoints } as Partial<ShapeModel>);
-    } else if (shape.type === "rectangle") {
+    } else if (shape.type === "linepolygon") {
       // For rectangles, handle position and scale changes
       const rotation = node.getAbsoluteRotation();
       const scale = node.getAbsoluteScale();
@@ -71,20 +71,17 @@ const ShapeRenderer = ({
       onShapeUpdate({
         x: position.x,
         y: position.y,
-        width: shape.width * scale.x,
-        height: shape.height * scale.y,
+        points: shape.points,
         // TODO verify if storing rotation is needed
         rotation: rotation,
       } as Partial<ShapeModel>);
     }
 
     onTransformEnd?.(e);
-    // onRestartTransformer?.();
   };
 
   const handleShapeUpdate = (updates: Partial<ShapeModel>) => {
     onShapeUpdate?.(updates);
-    // onRestartTransformer?.();
   };
 
   switch (shape.type) {
@@ -117,15 +114,17 @@ const ShapeRenderer = ({
           onShapeUpdate={handleShapeUpdate}
         />
       );
-    case "rectangle":
+    case "linepolygon":
       return (
-        <RectangleShape
-          shape={shape}
+        <LinePolygonShape
+          draggable={isSelected}
           isSelected={isSelected}
-          showAnchors={showAnchors}
           onShapeSelect={onShapeSelect}
-          onTransformEnd={handleTransformEnd}
           onShapeUpdate={handleShapeUpdate}
+          onTransformEnd={handleTransformEnd}
+          ref={shapeRef}
+          shape={shape}
+          showAnchors={showAnchors}
         />
       );
 

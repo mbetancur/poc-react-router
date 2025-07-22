@@ -158,13 +158,10 @@ export default function CanvasShapes() {
     console.log("transform", transform);
     console.log("node.position", node.position());
 
-    // Get the transformation matrix
     const transformMatrix = transform.getMatrix();
     console.log("transformMatrix", transformMatrix);
 
-    // Transform all points using Konva's transformation matrix
     const newPoints = points.map((point, index) => {
-      // Use Konva's transformPoint method to transform each point
       const transformedPoint = transform.point({ x: point.x, y: point.y });
 
       console.log(`Point ${index}:`, {
@@ -179,7 +176,7 @@ export default function CanvasShapes() {
     console.log("All transformed points:", newPoints);
 
     // TODO verify if all these are needed
-    // Reset the node's transformation to prevent cumulative transformations
+    // Reset the node's transformation transformations
     node.scaleX(1);
     node.scaleY(1);
     node.rotation(0);
@@ -191,13 +188,13 @@ export default function CanvasShapes() {
     console.log("points", points);
 
     // TODO Verify if this is better than transform point as points above
-    if (newPoints.length >= 2) {
-      const newControlPoints: Point[] = [];
-      for (let i = 0; i < newPoints.length - 1; i++) {
-        newControlPoints.push(getCurveControlPoint(newPoints[i + 1], newPoints[i]));
-      }
-      setCurveControlPoints(newControlPoints);
-    }
+    // if (newPoints.length >= 2) {
+    //   const newControlPoints: Point[] = [];
+    //   for (let i = 0; i < newPoints.length - 1; i++) {
+    //     newControlPoints.push(getCurveControlPoint(newPoints[i + 1], newPoints[i]));
+    //   }
+    //   setCurveControlPoints(newControlPoints);
+    // }
 
   };
   // const [mammImage] = useImage('./testmap.png');

@@ -1,5 +1,5 @@
 import { useReducer, useCallback } from 'react';
-import type { Point, ShapeType, ShapeModel } from '~/types/canvas';
+import type { Point, ShapeType, ShapeModel, DrawingMode } from '~/types/canvas';
 import { canvasReducer, initialCanvasState } from '~/reducers/canvasReducer';
 import { canvasActions } from '~/reducers/canvasActions';
 
@@ -46,7 +46,7 @@ export const useCanvasReducer = () => {
   }, []);
 
   // UI operations
-  const setDrawingMode = useCallback((mode: ShapeType | 'select') => {
+  const setDrawingMode = useCallback((mode: DrawingMode) => {
     dispatch(canvasActions.setDrawingMode(mode));
   }, []);
 

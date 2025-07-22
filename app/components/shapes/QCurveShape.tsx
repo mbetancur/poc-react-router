@@ -2,7 +2,7 @@ import type Konva from "konva";
 import { useMemo, useEffect, useRef, type RefObject } from "react";
 import { Circle, Line, Group, Shape, Text } from "react-konva";
 import type { QCurveShapeModel, Point } from "~/types/canvas";
-import { getDistanceBetweenPoints } from "~/utils/shapeFactory";
+import { getDistanceBetweenPoints, getTwoClosestPoints } from "~/utils/shapeFactory";
 
 export const SNAP_DISTANCE = 20;
 export const MIN_POINTS_FOR_SNAP = 3;
@@ -69,6 +69,72 @@ const QCurveShape = ({
     }
     return [];
   }, [shape.points, completeShapeLinePos, isClosed]);
+
+  // Helper: Distance from point p to segment ab
+  function getDistanceToSegment(p: Point, a: Point, b: Point): number {
+    const A = p.x - a.x;
+    const B = p.y - a.y;
+    const C = b.x - a.x;
+    const D = b.y - a.y;
+
+    const dot = A * C + B * D;
+    const len_sq = C * C + D * D;
+    let param = -1;
+    if (len_sq !== 0) param = dot / len_sq;
+
+    let xx, yy;
+    if (param < 0) {
+      xx = a.x;
+      yy = a.y;
+    } else if (param > 1) {
+      xx = b.x;
+      yy = b.y;
+    } else {
+      xx = a.x + param * C;
+      yy = a.y + param * D;
+    }
+
+    const dx = p.x - xx;
+    const dy = p.y - yy;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  const handleExtraPoint = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (onShapeUpdate && isClosed && e.type === 'dblclick' && e.evt.ctrlKey === true) {
+      const newPoint = { x: e.evt.x, y: e.evt.y };
+      let points = [...shape.points];
+
+      // Remove closing point only if it matches the first point
+      if (
+        points.length > 2 &&
+        points[0].x === points[points.length - 1].x &&
+        points[0].y === points[points.length - 1].y
+      ) {
+        points.pop();
+      }
+
+      // Find the closest segment
+      let minDist = Infinity;
+      let insertIdx = 0;
+      for (let i = 0; i < points.length; i++) {
+        const a = points[i];
+        const b = points[(i + 1) % points.length];
+        const dist = getDistanceToSegment(newPoint, a, b);
+        if (dist < minDist) {
+          minDist = dist;
+          insertIdx = i + 1;
+        }
+      }
+
+      // Insert new point
+      points.splice(insertIdx, 0, newPoint);
+
+      // Close the shape
+      points.push(points[0]);
+
+      onShapeUpdate({ points });
+    }
+  };
 
   const handlePointMove = (i: number, e: Konva.KonvaEventObject<MouseEvent>) => {
     if (onShapeUpdate && isClosed) {
@@ -173,6 +239,8 @@ const QCurveShape = ({
   }, [isClosed, shape.points, shape.controlPoints]);
 
   // Set up shape bounds for transformer
+  // This is needed because the transformer is not able to calculate the bounds of the shape
+  // when the shape is a custom shape like qcurve
   useEffect(() => {
     if (ref?.current) {
       ref.current.getSelfRect = () => calculateShapeBounds;
@@ -190,7 +258,6 @@ const QCurveShape = ({
           // TODO improve this loop part ??
           ctx.beginPath();
           ctx.moveTo(shape.points[0].x, shape.points[0].y);
-
           for (let i = 0; i < shape.points.length - 1; i++) {
             const nextPoint = shape.points[i + 1];
             const controlPoint = shape.controlPoints[i];
@@ -198,16 +265,21 @@ const QCurveShape = ({
               ctx.quadraticCurveTo(controlPoint.x, controlPoint.y, nextPoint.x, nextPoint.y);
             }
           }
-          // if (closed) ctx.closePath(); // TODO check if needed
+          // if (isClosed) ctx.closePath(); // TODO check if needed
           ctx.fillStrokeShape(konvaShape);
         }}
         fill={shape.fill}
-        onClick={() => onShapeSelect?.(shape.id, ref as RefObject<Konva.Shape>)}
+        onClick={(e) => {
+          onShapeSelect?.(shape.id, ref as RefObject<Konva.Shape>);
+        }}
         onTransformEnd={onTransformEnd}
         opacity={shape.opacity}
         stroke={shape.stroke}
         strokeWidth={shape.strokeWidth}
         visible={shape.visible}
+        onDblClick={(e) => {
+          handleExtraPoint(e);
+        }}
       />
 
       {/* TODO Check if Grouping anchors is better */}

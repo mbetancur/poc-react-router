@@ -3,7 +3,7 @@ export type Point = {
   y: number;
 };
 
-export type ShapeType = "qcurve" | "bcurve" | "rectangle";
+export type ShapeType = "qcurve" | "bcurve" | "linepolygon";
 
 export interface BaseShapeModel {
   id: string;
@@ -40,15 +40,14 @@ export interface BCurveShapeModel extends BaseShapeModel {
   controlPoints2: Point[];
 }
 
-export interface RectangleShapeModel extends BaseShapeModel {
-  type: "rectangle";
-  width: number;
-  height: number;
+export interface LinePolygonShapeModel extends BaseShapeModel {
+  type: "linepolygon";
+  points: Point[];
 }
 
-export type ShapeModel = QCurveShapeModel | BCurveShapeModel | RectangleShapeModel;
+export type ShapeModel = QCurveShapeModel | BCurveShapeModel | LinePolygonShapeModel;
 
-export type DrawingMode = 'select' | 'qcurve' | 'bcurve' | 'rectangle';
+export type DrawingMode = 'select' | 'qcurve' | 'bcurve' | 'linepolygon';
 
 export interface CanvasState {
   // Shape Management

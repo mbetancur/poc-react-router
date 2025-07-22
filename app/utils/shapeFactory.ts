@@ -1,8 +1,16 @@
-import type { Point, ShapeModel, ShapeType, QCurveShapeModel, BCurveShapeModel, RectangleShapeModel } from "~/types/canvas";
+import type { Point, ShapeModel, ShapeType, QCurveShapeModel, BCurveShapeModel, LinePolygonShapeModel } from "~/types/canvas";
 
 export const generateShapeId = (): string => {
   return `shape_${Math.random().toString(12)}-createdAt${Date.now()}`;
 };
+
+export function getTwoClosestPoints(points: Point[], newPoint: Point): [Point, Point] | null {
+  if (points.length < 2) return null;
+  const sorted = [...points]
+    .map(point => ({ point, dist: getDistanceBetweenPoints(point, newPoint) }))
+    .sort((a, b) => a.dist - b.dist);
+  return [sorted[0].point, sorted[1].point];
+}
 
 export const getDefaultShapeStyles = () => ({
   fill: "lightblue",
@@ -57,11 +65,19 @@ export const createBCurveShape = (firstPoint: Point): BCurveShapeModel => ({
   ...getDefaultShapeStyles(),
 });
 
-export const createRectangleShape = (startPoint: Point): RectangleShapeModel => ({
+const createPolygonPoints = (startPoint: Point, numPoints: number = 4, distance: number = 100): Point[] => {
+  const points: Point[] = [
+    { x: startPoint.x, y: startPoint.y },
+    { x: startPoint.x + distance, y: startPoint.y },
+    { x: startPoint.x + distance, y: startPoint.y + distance },
+    { x: startPoint.x, y: startPoint.y + distance },]
+  return points;
+};
+
+export const createLinePolygonShape = (startPoint: Point): LinePolygonShapeModel => ({
   id: generateShapeId(),
-  type: "rectangle",
-  width: 100,
-  height: 60,
+  type: "linepolygon",
+  points: createPolygonPoints(startPoint),
   name: "Opportunity name",
   created: Date.now(),
   modified: Date.now(),
@@ -77,8 +93,8 @@ export const createShapeByType = (shapeType: ShapeType, point: Point): ShapeMode
       return createQCurveShape(point);
     case "bcurve":
       return createBCurveShape(point);
-    case "rectangle":
-      return createRectangleShape(point);
+    case "linepolygon":
+      return createLinePolygonShape(point);
     default:
       throw new Error(`Unknown shape type: ${shapeType}`);
   }
@@ -90,8 +106,8 @@ export const isShapeComplete = (shape: ShapeModel): boolean => {
     case "bcurve":
       return shape.points.length >= 3 && shape.points[0].x === shape.points[shape.points.length - 1].x
         && shape.points[0].y === shape.points[shape.points.length - 1].y;
-    case "rectangle":
-      return true; // Rectangles are complete shapes by default
+    case "linepolygon":
+      return true; // Polygons are completed shapes by default
     default:
       return false;
   }

@@ -16,7 +16,7 @@ const DrawingPanel = ({
     { mode: 'select' as const, label: 'Select' },
     { mode: 'qcurve' as const, label: 'Q-Curve' },
     { mode: 'bcurve' as const, label: 'B-Curve' },
-    { mode: 'rectangle' as const, label: 'Rectangle' },
+    { mode: 'linepolygon' as const, label: 'Regular Polygon' },
   ];
 
   return (
