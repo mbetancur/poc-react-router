@@ -99,6 +99,26 @@ const ShapeRenderer = ({
     onShapeUpdate?.(updates);
   };
 
+  const handleDragEnd = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (!onShapeUpdate) return;
+    const node = e.target as Konva.Shape;
+    const dx = node.x();
+    const dy = node.y();
+
+    if (dx !== 0 || dy !== 0) {
+      if (shape.type === "qcurve") {
+        const newPoints = shape.points.map(p => ({ x: p.x + dx, y: p.y + dy }));
+        const newControlPoints = shape.controlPoints.map(p => ({ x: p.x + dx, y: p.y + dy }));
+        onShapeUpdate({ points: newPoints, controlPoints: newControlPoints });
+      } else if (shape.type === "linepolygon") {
+        const newPoints = shape.points.map(p => ({ x: p.x + dx, y: p.y + dy }));
+        onShapeUpdate({ points: newPoints });
+      }
+      node.x(0);
+      node.y(0);
+    }
+  };
+
   switch (shape.type) {
     case "qcurve":
       return (
@@ -113,6 +133,7 @@ const ShapeRenderer = ({
           ref={shapeRef}
           shape={shape}
           showAnchors={showAnchors}
+          onDragEnd={handleDragEnd}
         />
       );
     case "bcurve":

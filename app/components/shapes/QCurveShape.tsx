@@ -33,7 +33,6 @@ const QCurveShape = ({
   snapDistance = SNAP_DISTANCE,
   ...rest
 }: QCurveShapeProps) => {
-
   const textRef = useRef<Konva.Text>(null);
 
   const isClosed = useMemo(() => {
@@ -114,6 +113,7 @@ const QCurveShape = ({
   };
 
   const handleAnchorDrag = (i: number, e: Konva.KonvaEventObject<MouseEvent>) => {
+    e.cancelBubble = true;
     if (onShapeUpdate && isClosed) {
       const newX = e.target.x();
       const newY = e.target.y();
@@ -130,6 +130,7 @@ const QCurveShape = ({
   };
 
   const handleControlPointMove = (i: number, e: Konva.KonvaEventObject<MouseEvent>) => {
+    e.cancelBubble = true;
     if (onShapeUpdate && isClosed) {
       const newX = e.target.x();
       const newY = e.target.y();
@@ -260,6 +261,7 @@ const QCurveShape = ({
       />
 
       {/* TODO Check if Grouping anchors is better */}
+      {/* This is the anchor for the vertex of the shape */}
       {showAnchors && shape.points.map((point, i) => (
         <Circle
           draggable={isClosed}
@@ -274,6 +276,7 @@ const QCurveShape = ({
         />
       ))}
 
+      {/* This is the anchor for the curve of the shape */}
       {showAnchors && shape.controlPoints.map((point, i) => (
         <Circle
           draggable={isClosed}
@@ -312,8 +315,10 @@ const QCurveShape = ({
 
       {isClosed && (
         <Text
-          dragBoundFunc={textDragBoundFunc}
-          draggable={isSelected}
+          // TODO This is creating a bug when dragging 
+          // avoid bubbling up the event to the shape
+          // dragBoundFunc={textDragBoundFunc}
+          // draggable={isSelected}
           fill="white"
           fontSize={12} //TODO Calculate font size based on the text length and shape size
           offsetX={textDimensions.width / 2}
