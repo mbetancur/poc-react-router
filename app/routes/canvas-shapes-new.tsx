@@ -206,8 +206,8 @@ export default function CanvasShapesNew() {
       {/* TODO create a component */}
       {/* Dev info */}
       {process.env.NODE_ENV === 'development' && (
-        <div className="bg-gray-800 text-white text-xs">
-          <div>Cursor position  x: {state.currentMousePos?.x} y: {state.currentMousePos?.y}</ div>
+        <div className="bg-gray-800 text-white text-xs max-w-40">
+          <div>Cursor pos x: {state.currentMousePos?.x} y: {state.currentMousePos?.y}</ div>
           <div>Mode: {state.drawingMode}</div>
           <div>Shapes: {allShapes.length}</div>
           <div>Selected: {selectedShape?.id || 'none'}</div>

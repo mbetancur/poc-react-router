@@ -1,8 +1,8 @@
 import type Konva from "konva";
-import { useMemo, useEffect, useRef, type RefObject } from "react";
+import { useMemo, useEffect, useRef, type RefObject, useCallback } from "react";
 import { Circle, Line, Group, Shape, Text } from "react-konva";
 import type { QCurveShapeModel, Point } from "~/types/canvas";
-import { getDistanceBetweenPoints, getTwoClosestPoints } from "~/utils/shapeFactory";
+import { getDistanceBetweenPoints, getTwoClosestPoints, isShapeComplete } from "~/utils/shapeFactory";
 
 export const SNAP_DISTANCE = 20;
 export const MIN_POINTS_FOR_SNAP = 3;
@@ -37,9 +37,7 @@ const QCurveShape = ({
   const textRef = useRef<Konva.Text>(null);
 
   const isClosed = useMemo(() => {
-    return shape.points.length >= 3 &&
-      shape.points[0].x === shape.points[shape.points.length - 1].x &&
-      shape.points[0].y === shape.points[shape.points.length - 1].y;
+    return isShapeComplete(shape)
   }, [shape.points]);
 
   const shouldSnapToStart: boolean = useMemo(() => {
@@ -70,73 +68,52 @@ const QCurveShape = ({
     return [];
   }, [shape.points, completeShapeLinePos, isClosed]);
 
-  // Helper: Distance from point p to segment ab
-  function getDistanceToSegment(p: Point, a: Point, b: Point): number {
-    const A = p.x - a.x;
-    const B = p.y - a.y;
-    const C = b.x - a.x;
-    const D = b.y - a.y;
-
-    const dot = A * C + B * D;
-    const len_sq = C * C + D * D;
-    let param = -1;
-    if (len_sq !== 0) param = dot / len_sq;
-
-    let xx, yy;
-    if (param < 0) {
-      xx = a.x;
-      yy = a.y;
-    } else if (param > 1) {
-      xx = b.x;
-      yy = b.y;
-    } else {
-      xx = a.x + param * C;
-      yy = a.y + param * D;
-    }
-
-    const dx = p.x - xx;
-    const dy = p.y - yy;
-    return Math.sqrt(dx * dx + dy * dy);
-  }
-
   const handleExtraPoint = (e: Konva.KonvaEventObject<MouseEvent>) => {
     if (onShapeUpdate && isClosed && e.type === 'dblclick' && e.evt.ctrlKey === true) {
       const newPoint = { x: e.evt.x, y: e.evt.y };
-      let points = [...shape.points];
+      const tempPoints = [...shape.points];
 
-      // Remove closing point only if it matches the first point
-      if (
-        points.length > 2 &&
-        points[0].x === points[points.length - 1].x &&
-        points[0].y === points[points.length - 1].y
-      ) {
-        points.pop();
+      // Opening the shape for edition
+      if (isShapeComplete(shape)) {
+        tempPoints.pop();
       }
 
-      // Find the closest segment
-      let minDist = Infinity;
-      let insertIdx = 0;
-      for (let i = 0; i < points.length; i++) {
-        const a = points[i];
-        const b = points[(i + 1) % points.length];
-        const dist = getDistanceToSegment(newPoint, a, b);
-        if (dist < minDist) {
-          minDist = dist;
-          insertIdx = i + 1;
+      const result = getTwoClosestPoints(tempPoints, newPoint);
+      if (result) {
+        const { closestPoint, secondClosestPoint } = result;
+        const index = tempPoints.findIndex(point => point.x === closestPoint.x && point.y === closestPoint.y);
+        switch (index) {
+          case 0:
+            if (tempPoints[index + 1] === secondClosestPoint) {
+              tempPoints.splice(0, 0, newPoint)
+            }
+            else {
+              tempPoints.push(newPoint)
+            }
+            break
+          case tempPoints.length - 1:
+            if (tempPoints[index - 1] === secondClosestPoint) {
+              tempPoints.splice(tempPoints.length - 1, 0, newPoint)
+            }
+            else {
+              tempPoints.push(newPoint)
+            }
+            break
+          default:
+            tempPoints.splice(index, 0, newPoint)
+            break
         }
+        // Closing the shape for completion
+        tempPoints.push(shape.points[0])
+        onShapeUpdate({ points: tempPoints });
       }
-
-      // Insert new point
-      points.splice(insertIdx, 0, newPoint);
-
-      // Close the shape
-      points.push(points[0]);
-
-      onShapeUpdate({ points });
+      else {
+        console.warn('Error calculating shape points')
+      }
     }
   };
 
-  const handlePointMove = (i: number, e: Konva.KonvaEventObject<MouseEvent>) => {
+  const handleAnchorDrag = (i: number, e: Konva.KonvaEventObject<MouseEvent>) => {
     if (onShapeUpdate && isClosed) {
       const newX = e.target.x();
       const newY = e.target.y();
@@ -200,17 +177,17 @@ const QCurveShape = ({
     const centerY = sumCenterY / (centerConstant * area);
 
     return { x: centerX, y: centerY };
-  }, [isClosed, shape.points, shape.controlPoints]);
+  }, [isClosed, shape.points]);
 
   const textDimensions = useMemo(() => {
-    if (textRef.current) {
+    if (isClosed && textRef.current) {
       return {
         width: textRef.current.width(),
         height: textRef.current.height()
       };
     }
     return { width: 0, height: 0 };
-  }, [textRef, isClosed, shape.points, shape.controlPoints]);
+  }, [textRef.current, isClosed, shape.points, shape.controlPoints]);
 
   const calculateShapeBounds = useMemo(() => {
     if (!isClosed || shape.points.length < 2) {
@@ -265,21 +242,21 @@ const QCurveShape = ({
               ctx.quadraticCurveTo(controlPoint.x, controlPoint.y, nextPoint.x, nextPoint.y);
             }
           }
-          // if (isClosed) ctx.closePath(); // TODO check if needed
+          if (isClosed) ctx.closePath(); // TODO check if needed
           ctx.fillStrokeShape(konvaShape);
         }}
         fill={shape.fill}
-        onClick={(e) => {
+        onClick={() => {
           onShapeSelect?.(shape.id, ref as RefObject<Konva.Shape>);
+        }}
+        onDblClick={(e) => {
+          handleExtraPoint(e);
         }}
         onTransformEnd={onTransformEnd}
         opacity={shape.opacity}
         stroke={shape.stroke}
         strokeWidth={shape.strokeWidth}
         visible={shape.visible}
-        onDblClick={(e) => {
-          handleExtraPoint(e);
-        }}
       />
 
       {/* TODO Check if Grouping anchors is better */}
@@ -288,7 +265,7 @@ const QCurveShape = ({
           draggable={isClosed}
           fill="white"
           key={`anchor-${i}`}
-          onDragEnd={(e) => handlePointMove(i, e)}
+          onDragEnd={(e) => handleAnchorDrag(i, e)}
           radius={5}
           stroke="gray"
           strokeWidth={1}
@@ -335,11 +312,8 @@ const QCurveShape = ({
 
       {isClosed && (
         <Text
-          // TODO Check if these work
-          // align="center"
-          // verticalAlign="middle"
           dragBoundFunc={textDragBoundFunc}
-          draggable={isClosed}
+          draggable={isSelected}
           fill="white"
           fontSize={12} //TODO Calculate font size based on the text length and shape size
           offsetX={textDimensions.width / 2}

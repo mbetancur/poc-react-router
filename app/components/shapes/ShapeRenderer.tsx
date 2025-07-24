@@ -48,6 +48,7 @@ const ShapeRenderer = ({
 
       // Reset node transformation
       // TODO verify if all these are needed
+      // or others like rotation, x, y, etc. are needed
       node.scaleX(1);
       node.scaleY(1);
       node.rotation(0);
@@ -56,25 +57,39 @@ const ShapeRenderer = ({
 
       onShapeUpdate({ points: transformedPoints, controlPoints: transformedControlPoints } as Partial<ShapeModel>);
     } else if (shape.type === "linepolygon") {
-      // For rectangles, handle position and scale changes
-      const rotation = node.getAbsoluteRotation();
-      const scale = node.getAbsoluteScale();
-      const position = node.getAbsolutePosition();
 
-      // Reset node transformation
+      const transformedPoints = shape.points.map((point) => {
+        const transformedPoint = transform.point({ x: point.x, y: point.y });
+        return { x: transformedPoint.x, y: transformedPoint.y };
+      });
+
       node.scaleX(1);
       node.scaleY(1);
       node.rotation(0);
       node.x(0);
       node.y(0);
+      onShapeUpdate({ points: transformedPoints } as Partial<ShapeModel>);
 
-      onShapeUpdate({
-        x: position.x,
-        y: position.y,
-        points: shape.points,
-        // TODO verify if storing rotation is needed
-        rotation: rotation,
-      } as Partial<ShapeModel>);
+
+      // For rectangles, handle position and scale changes
+      // const rotation = node.getAbsoluteRotation();
+      // const scale = node.getAbsoluteScale();
+      // const position = node.getAbsolutePosition();
+
+      // // Reset node transformation
+      // node.scaleX(1);
+      // node.scaleY(1);
+      // node.rotation(0);
+      // node.x(0);
+      // node.y(0);
+
+      // onShapeUpdate({
+      //   x: position.x,
+      //   y: position.y,
+      //   points: shape.points,
+      //   // TODO verify if storing rotation is needed
+      //   rotation: rotation,
+      // } as Partial<ShapeModel>);
     }
 
     onTransformEnd?.(e);

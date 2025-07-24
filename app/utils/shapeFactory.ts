@@ -4,12 +4,12 @@ export const generateShapeId = (): string => {
   return `shape_${Math.random().toString(12)}-createdAt${Date.now()}`;
 };
 
-export function getTwoClosestPoints(points: Point[], newPoint: Point): [Point, Point] | null {
+export function getTwoClosestPoints(points: Point[], newPoint: Point) {
   if (points.length < 2) return null;
   const sorted = [...points]
     .map(point => ({ point, dist: getDistanceBetweenPoints(point, newPoint) }))
     .sort((a, b) => a.dist - b.dist);
-  return [sorted[0].point, sorted[1].point];
+  return { closestPoint: sorted[0].point, secondClosestPoint: sorted[1].point };
 }
 
 export const getDefaultShapeStyles = () => ({
@@ -65,11 +65,11 @@ export const createBCurveShape = (firstPoint: Point): BCurveShapeModel => ({
   ...getDefaultShapeStyles(),
 });
 
-const createPolygonPoints = (startPoint: Point, numPoints: number = 4, distance: number = 100): Point[] => {
+const createPolygonPoints = (startPoint: Point, distance: number = 100): Point[] => {
   const points: Point[] = [
     { x: startPoint.x, y: startPoint.y },
-    { x: startPoint.x + distance, y: startPoint.y },
-    { x: startPoint.x + distance, y: startPoint.y + distance },
+    { x: startPoint.x + 2 * distance, y: startPoint.y },
+    { x: startPoint.x + 2 * distance, y: startPoint.y + distance },
     { x: startPoint.x, y: startPoint.y + distance },]
   return points;
 };
