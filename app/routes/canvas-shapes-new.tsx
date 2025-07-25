@@ -1,11 +1,12 @@
 import type Konva from "konva";
 import { useRef, type RefObject } from "react";
-import { Layer, Stage, Transformer } from "react-konva";
+import { Layer, Stage, Transformer, Image } from "react-konva";
 import { useCanvasReducer } from "~/hooks/useCanvasReducer";
 import ShapeRenderer from "~/components/shapes/ShapeRenderer";
 import DrawingPanel from "~/components/DrawingPanel";
 import type { Point } from "~/types/canvas";
 import { shouldSnapToStart } from "~/utils/shapeFactory";
+import useImage from "use-image";
 
 export default function CanvasShapesNew() {
   const {
@@ -93,69 +94,39 @@ export default function CanvasShapesNew() {
     updateShape(shapeId, updates);
   };
 
-  const handleTransformEnd = (shapeId: string, e: Konva.KonvaEventObject<Event>) => {
-    console.log('handleTransformEnd', shapeId, e);
-    const node = e.target as Konva.Shape;
-    const transform = node._getAbsoluteTransform();
-
-    const shape = state.shapes.get(shapeId);
-    if (!shape) return;
-
-    if (shape.type === "qcurve" || shape.type === "bcurve") {
-      // Transform points for curve shapes
-      const transformedPoints = shape.points.map((point) => {
-        const transformedPoint = transform.point({ x: point.x, y: point.y });
-        return { x: transformedPoint.x, y: transformedPoint.y };
-      });
-
-      // Reset node transformation
-      node.scaleX(1);
-      node.scaleY(1);
-      node.rotation(0);
-      node.x(0);
-      node.y(0);
-
-      transformShape(shapeId, { points: transformedPoints });
-    } else if (shape.type === "linepolygon") {
-      // For regular polygons, handle position and scale changes
-      const rotation = node.getAbsoluteRotation();
-      const scale = node.getAbsoluteScale();
-      const position = node.getAbsolutePosition();
-
-      // Reset node transformation
-      node.scaleX(1);
-      node.scaleY(1);
-      node.rotation(0);
-      node.x(0);
-      node.y(0);
-
-      transformShape(shapeId, {
-        x: position.x,
-        y: position.y,
-        points: shape.points,
-        rotation: rotation,
-      });
-    }
-  };
-
   const restartTransformer = (selectedShapeRef: RefObject<Konva.Shape>) => {
     if (transformerRef.current && selectedShapeRef.current && selectedShape) {
       transformerRef.current.nodes([selectedShapeRef.current]);
     }
   };
 
+  // Temporal approach to add an image to the canvas
+  // const [mapImage] = useImage('./testmap.png');
+  // Remove once is no longer needed
+
   return (
     <div className="flex h-screen">
       <div className="flex-1 overflow-hidden">
         <Stage
           // TODO set variables for these size values
-          width={1000}
-          height={1000 - 80}
+          width={3000}
+          height={1563}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onClick={handleStageClick}
         >
           <Layer>
+            {/* Image temporal approach
+            This will require manual size setting and positioning
+             Remove once is no longer needed
+            */}
+            {/* <Image
+              image={mapImage}
+              x={0}
+              y={0}
+              width={3000}
+              height={1563}
+            /> */}
             {/* This renders the created shapes */}
             {allShapes.map((shape) => (
               <ShapeRenderer
@@ -203,6 +174,7 @@ export default function CanvasShapesNew() {
         onClearCanvas={clearCanvas}
       />
 
+
       {/* TODO create a component */}
       {/* Dev info */}
       {process.env.NODE_ENV === 'development' && (
@@ -215,6 +187,27 @@ export default function CanvasShapesNew() {
           {state.activeDrawingShape && (
             <div>Active: {state.activeDrawingShape.type} {(state.activeDrawingShape.type === 'qcurve' || state.activeDrawingShape.type === 'bcurve') && `(${state.activeDrawingShape.points.length} points)`}</div>
           )}
+          {/* Temporal approach to export shapes 
+            Remove once is no longer needed
+          */}
+          <button
+            onClick={() => {
+              console.log(allShapes);
+              const dataStr = JSON.stringify(allShapes, null, 2);
+              const blob = new Blob([dataStr], { type: 'application/json' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = 'shapes-export.json';
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+            }}
+            className="bg-orange-500 "
+          >
+            Temporal export shapes
+          </button>
         </div>
       )}
     </div>

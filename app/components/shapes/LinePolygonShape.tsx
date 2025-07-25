@@ -123,8 +123,9 @@ const LinePolygonShape = ({
       ))}
 
       <Text
-        dragBoundFunc={textDragBoundFunc}
-        draggable={isSelected}
+        // TODO check bug with dragBoundFunc
+        // dragBoundFunc={textDragBoundFunc}
+        // // draggable={isSelected}
         fill="white"
         fontSize={12}
         offsetX={textDimensions.width / 2}

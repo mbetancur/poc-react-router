@@ -15,7 +15,8 @@ const DrawingPanel = ({
     // TODO create const for these modes
     { mode: 'select' as const, label: 'Select' },
     { mode: 'qcurve' as const, label: 'Q-Curve' },
-    { mode: 'bcurve' as const, label: 'B-Curve' },
+    // This is not implemented yet, but it's in the code so it's here for reference
+    // { mode: 'bcurve' as const, label: 'B-Curve' }, // TODO: Implement BCurveShape component
     { mode: 'linepolygon' as const, label: 'Regular Polygon' },
   ];
 

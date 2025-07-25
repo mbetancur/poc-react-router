@@ -126,6 +126,7 @@ const ShapeRenderer = ({
           currentMousePos={currentMousePos}
           draggable={isSelected}
           isSelected={isSelected}
+          onDragEnd={handleDragEnd}
           onRestartTransformer={onRestartTransformer}
           onShapeSelect={onShapeSelect}
           onShapeUpdate={handleShapeUpdate}
@@ -133,7 +134,6 @@ const ShapeRenderer = ({
           ref={shapeRef}
           shape={shape}
           showAnchors={showAnchors}
-          onDragEnd={handleDragEnd}
         />
       );
     case "bcurve":
@@ -155,6 +155,7 @@ const ShapeRenderer = ({
         <LinePolygonShape
           draggable={isSelected}
           isSelected={isSelected}
+          onDragEnd={handleDragEnd}
           onShapeSelect={onShapeSelect}
           onShapeUpdate={handleShapeUpdate}
           onTransformEnd={handleTransformEnd}
