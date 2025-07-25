@@ -142,6 +142,9 @@ const QCurveShape = ({
     }
   };
 
+  // TODO This is creating a bug when dragging the text
+  // avoid bubbling up the event to the shape
+  // DONT REMOVE THIS FUNCTION
   const textDragBoundFunc = (pos: Point): Point => {
     if (ref?.current && textRef.current) {
       if (ref.current.intersects(pos)) {
