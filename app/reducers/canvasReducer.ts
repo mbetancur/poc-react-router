@@ -100,6 +100,46 @@ export const canvasReducer = (state: CanvasState, action: CanvasAction): CanvasS
       return state;
     }
 
+    case 'CHANGE_SHAPE_POS': {
+      if (state.shapes.size <= 1) {
+        return state;
+      }
+
+      const { shape, direction } = action.payload
+      const shapesArray = Array.from(state.shapes);
+      // TODO consider sending the index instead
+      const insertIndex = shapesArray.findIndex(sh => sh[0] === shape.id)
+      console.log('b', shapesArray)
+
+      if (insertIndex < 0) {
+        console.warn("Shape not found")
+        return state
+      }
+      // This avoids side effects on first and last item
+      // TODO create type for direction
+      else if ((insertIndex === 0 && direction === "up") || insertIndex === state.shapes.size - 1 && direction === "down") return state
+
+      const tempShape = shapesArray.splice(insertIndex, 1)[0]
+
+      if (direction === "up") {
+        shapesArray.splice(insertIndex - 1, 0, tempShape)
+      }
+      else if (direction === "down") {
+        console.log("down")
+        shapesArray.splice(insertIndex + 1, 0, tempShape)
+      }
+      else {
+        console.warn("Wrong input direction")
+      }
+      console.log('a', shapesArray)
+
+      return {
+        ...state,
+        shapes: new Map(shapesArray)
+      }
+
+    }
+
     case 'COMPLETE_SHAPE': {
       if (!state.activeDrawingShape) {
         return state;

@@ -65,6 +65,14 @@ export interface DeleteShapeAction {
   };
 }
 
+export interface ChangeShapePos {
+  type: 'CHANGE_SHAPE_POS';
+  payload: {
+    shape: ShapeModel,
+    direction: string
+  }
+}
+
 // UI State Actions
 export interface SetDrawingModeAction {
   type: 'SET_DRAWING_MODE';
@@ -87,6 +95,7 @@ export interface ClearCanvasAction {
 export type CanvasAction =
   | StartDrawingAction
   | AddPointAction
+  | ChangeShapePos
   | CompleteShapeAction
   | CancelDrawingAction
   | SelectShapeAction
@@ -107,6 +116,11 @@ export const canvasActions = {
   addPoint: (point: Point): AddPointAction => ({
     type: 'ADD_POINT',
     payload: { point }
+  }),
+
+  changeShapePos: (shape: ShapeModel, direction: string): ChangeShapePos => ({
+    type: 'CHANGE_SHAPE_POS',
+    payload: { shape, direction }
   }),
 
   completeShape: (): CompleteShapeAction => ({

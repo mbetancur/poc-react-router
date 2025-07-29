@@ -7,23 +7,25 @@ import DrawingPanel from "~/components/DrawingPanel";
 import type { Point } from "~/types/canvas";
 import { shouldSnapToStart } from "~/utils/shapeFactory";
 import useImage from "use-image";
+import ShapesPanel from "~/components/ShapesPanel";
 
 export default function CanvasShapesNew() {
   const {
-    state,
-    allShapes,
-    selectedShape,
-    isDrawing,
-    startDrawing,
     addPoint,
-    completeShape,
-    selectShape,
-    deselectShape,
-    updateShape,
-    transformShape,
-    setDrawingMode,
-    updateMousePos,
+    allShapes,
+    changeShapePos,
     clearCanvas,
+    completeShape,
+    deselectShape,
+    isDrawing,
+    selectedShape,
+    selectShape,
+    setDrawingMode,
+    startDrawing,
+    state,
+    transformShape,
+    updateMousePos,
+    updateShape,
   } = useCanvasReducer();
 
   const transformerRef = useRef<Konva.Transformer>(null);
@@ -101,7 +103,7 @@ export default function CanvasShapesNew() {
   };
 
   // Temporal approach to add an image to the canvas
-  // const [mapImage] = useImage('./testmap.png');
+  const [mapImage] = useImage('./testmap.png');
   // Remove once is no longer needed
 
   return (
@@ -168,11 +170,18 @@ export default function CanvasShapesNew() {
         </Stage>
       </div>
 
-      <DrawingPanel
-        currentMode={state.drawingMode}
-        onModeChange={setDrawingMode}
-        onClearCanvas={clearCanvas}
-      />
+      {/* TODO create proper Side Panel component for these */}
+      <div className="bg-gray-700">
+        <DrawingPanel
+          currentMode={state.drawingMode}
+          onModeChange={setDrawingMode}
+          onClearCanvas={clearCanvas}
+        />
+        <ShapesPanel
+          shapes={allShapes}
+          onChangeShapePosition={changeShapePos}
+        />
+      </div>
 
 
       {/* TODO create a component */}

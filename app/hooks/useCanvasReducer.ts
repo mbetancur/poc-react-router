@@ -2,6 +2,7 @@ import { useReducer, useCallback } from 'react';
 import type { Point, ShapeType, ShapeModel, DrawingMode } from '~/types/canvas';
 import { canvasReducer, initialCanvasState } from '~/reducers/canvasReducer';
 import { canvasActions } from '~/reducers/canvasActions';
+import { string } from 'zod';
 
 export const useCanvasReducer = () => {
   const [state, dispatch] = useReducer(canvasReducer, initialCanvasState);
@@ -14,6 +15,10 @@ export const useCanvasReducer = () => {
 
   const addPoint = useCallback((point: Point) => {
     dispatch(canvasActions.addPoint(point));
+  }, []);
+
+  const changeShapePos = useCallback((shape: ShapeModel, direction: string) => {
+    dispatch(canvasActions.changeShapePos(shape, direction));
   }, []);
 
   const completeShape = useCallback(() => {
@@ -69,6 +74,7 @@ export const useCanvasReducer = () => {
     isDrawing,
     startDrawing,
     addPoint,
+    changeShapePos,
     completeShape,
     cancelDrawing,
     selectShape,

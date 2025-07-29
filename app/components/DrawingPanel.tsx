@@ -22,7 +22,7 @@ const DrawingPanel = ({
 
   return (
     <div>
-      <div className="text-sm text-gray-600 flex items-center">
+      <div className="text-sm">
         <span className="font-medium">Mode:</span>
         <span>{currentMode}</span>
       </div>
