@@ -109,7 +109,6 @@ export const canvasReducer = (state: CanvasState, action: CanvasAction): CanvasS
       const shapesArray = Array.from(state.shapes);
       // TODO consider sending the index instead
       const insertIndex = shapesArray.findIndex(sh => sh[0] === shape.id)
-      console.log('b', shapesArray)
 
       if (insertIndex < 0) {
         console.warn("Shape not found")
@@ -125,13 +124,11 @@ export const canvasReducer = (state: CanvasState, action: CanvasAction): CanvasS
         shapesArray.splice(insertIndex - 1, 0, tempShape)
       }
       else if (direction === "down") {
-        console.log("down")
         shapesArray.splice(insertIndex + 1, 0, tempShape)
       }
       else {
         console.warn("Wrong input direction")
       }
-      console.log('a', shapesArray)
 
       return {
         ...state,
