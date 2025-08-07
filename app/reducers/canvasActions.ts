@@ -65,6 +65,13 @@ export interface DeleteShapeAction {
   };
 }
 
+export interface DuplicateShapeAction {
+  type: 'DUPLICATE_SHAPE';
+  payload: {
+    shapeId: string;
+  };
+}
+
 export interface ChangeShapePos {
   type: 'CHANGE_SHAPE_POS';
   payload: {
@@ -103,6 +110,7 @@ export type CanvasAction =
   | UpdateShapeAction
   | TransformShapeAction
   | DeleteShapeAction
+  | DuplicateShapeAction
   | SetDrawingModeAction
   | UpdateMousePosAction
   | ClearCanvasAction;
@@ -153,6 +161,11 @@ export const canvasActions = {
   deleteShape: (shapeId: string): DeleteShapeAction => ({
     type: 'DELETE_SHAPE',
     payload: { shapeId }
+  }),
+
+  duplicateShape: (shapeId: string): DuplicateShapeAction => ({
+    type: 'DUPLICATE_SHAPE',
+    payload: { shapeId },
   }),
 
   setDrawingMode: (mode: DrawingMode): SetDrawingModeAction => ({

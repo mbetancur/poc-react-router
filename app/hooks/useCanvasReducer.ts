@@ -50,6 +50,10 @@ export const useCanvasReducer = () => {
     dispatch(canvasActions.deleteShape(shapeId));
   }, []);
 
+  const duplicateShape = useCallback((shapeId: string) => {
+    dispatch(canvasActions.duplicateShape(shapeId));
+  }, []);
+
   // UI operations
   const setDrawingMode = useCallback((mode: DrawingMode) => {
     dispatch(canvasActions.setDrawingMode(mode));
@@ -82,6 +86,7 @@ export const useCanvasReducer = () => {
     updateShape,
     transformShape,
     deleteShape,
+    duplicateShape,
     setDrawingMode,
     updateMousePos,
     clearCanvas,

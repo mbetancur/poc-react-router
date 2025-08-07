@@ -14,6 +14,7 @@ export default function CanvasShapesNew() {
     addPoint,
     allShapes,
     changeShapePos,
+    duplicateShape,
     clearCanvas,
     completeShape,
     deselectShape,
@@ -180,6 +181,7 @@ export default function CanvasShapesNew() {
         <ShapesPanel
           shapes={allShapes}
           onChangeShapePosition={changeShapePos}
+          onDuplicateShape={duplicateShape}
         />
       </div>
 

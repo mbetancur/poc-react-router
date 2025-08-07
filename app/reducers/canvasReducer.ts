@@ -264,6 +264,65 @@ export const canvasReducer = (state: CanvasState, action: CanvasAction): CanvasS
       };
     }
 
+    case 'DUPLICATE_SHAPE': {
+      const { shapeId } = action.payload;
+      const original = state.shapes.get(shapeId);
+      if (!original) return state;
+
+      const now = Date.now();
+      const newId = crypto.randomUUID();
+
+      const offsetPoint = (p: Point) => ({ x: p.x + 12, y: p.y + 12 });
+
+      let duplicated: ShapeModel;
+      if (original.type === 'qcurve') {
+        duplicated = {
+          ...original,
+          id: newId,
+          name: original.name ? `${original.name} (copy)` : undefined,
+          points: original.points.map(offsetPoint),
+          controlPoints: original.controlPoints.map(offsetPoint),
+          created: now,
+          modified: now,
+        };
+      } else if (original.type === 'bcurve') {
+        duplicated = {
+          ...original,
+          id: newId,
+          name: original.name ? `${original.name} (copy)` : undefined,
+          points: original.points.map(offsetPoint),
+          controlPoints1: original.controlPoints1.map(offsetPoint),
+          controlPoints2: original.controlPoints2.map(offsetPoint),
+          created: now,
+          modified: now,
+        };
+      } else {
+        duplicated = {
+          ...original,
+          id: newId,
+          name: original.name ? `${original.name} (copy)` : undefined,
+          points: original.points.map(offsetPoint),
+          created: now,
+          modified: now,
+        };
+      }
+
+      const arr = Array.from(state.shapes);
+      const idx = arr.findIndex(([id]) => id === shapeId);
+      const entry: [string, ShapeModel] = [duplicated.id, duplicated];
+      if (idx === -1) {
+        arr.push(entry);
+      } else {
+        arr.splice(idx + 1, 0, entry);
+      }
+
+      return {
+        ...state,
+        shapes: new Map(arr),
+        selectedShapeId: duplicated.id,
+      };
+    }
+
     case 'SET_DRAWING_MODE': {
       const { mode } = action.payload;
 
