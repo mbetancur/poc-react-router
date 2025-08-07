@@ -2,6 +2,7 @@ import type Konva from "konva";
 import { useRef, useMemo, type RefObject } from "react";
 import { Group, Text, Circle, Line } from "react-konva";
 import type { LinePolygonShapeModel, Point } from "~/types/canvas";
+import { getTwoClosestPoints } from "~/utils/shapeFactory";
 
 interface LinePolygonShapeProps extends Konva.ShapeConfig {
   isSelected?: boolean;
@@ -83,12 +84,51 @@ const LinePolygonShape = ({
   };
 
   const handleAnchorDrag = (anchorIndex: number, e: Konva.KonvaEventObject<MouseEvent>) => {
+    e.cancelBubble = true; 
     if (!onShapeUpdate) return;
     const newX = e.target.x();
     const newY = e.target.y();
     const newPoints = [...shape.points];
     newPoints[anchorIndex] = { x: newX, y: newY };
     onShapeUpdate({ points: newPoints });
+  };
+
+  const handleExtraPoint = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (onShapeUpdate && e.type === 'dblclick' && e.evt.ctrlKey === true) {
+      const newPoint = { x: e.evt.x, y: e.evt.y };
+      const tempPoints = [...shape.points];
+
+      const result = getTwoClosestPoints(tempPoints, newPoint);
+      if (result) {
+        const { closestPoint, secondClosestPoint } = result;
+        const index = tempPoints.findIndex(point => point.x === closestPoint.x && point.y === closestPoint.y);
+        switch (index) {
+          case 0:
+            if (tempPoints[index + 1] === secondClosestPoint) {
+              tempPoints.splice(0, 0, newPoint)
+            }
+            else {
+              tempPoints.push(newPoint)
+            }
+            break
+          case tempPoints.length - 1:
+            if (tempPoints[index - 1] === secondClosestPoint) {
+              tempPoints.splice(tempPoints.length - 1, 0, newPoint)
+            }
+            else {
+              tempPoints.push(newPoint)
+            }
+            break
+          default:
+            tempPoints.splice(index, 0, newPoint)
+            break
+        }
+        onShapeUpdate({ points: tempPoints });
+      }
+      else {
+        console.warn('Error calculating shape points')
+      }
+    }
   };
 
   return (
@@ -104,6 +144,9 @@ const LinePolygonShape = ({
         visible={shape.visible}
         onClick={() => {
           onShapeSelect?.(shape.id, ref as RefObject<Konva.Shape>);
+        }}
+        onDblClick={(e) => {
+          handleExtraPoint(e);
         }}
         onTransformEnd={onTransformEnd}
       />
