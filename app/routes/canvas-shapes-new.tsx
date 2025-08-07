@@ -14,6 +14,7 @@ export default function CanvasShapesNew() {
     addPoint,
     allShapes,
     changeShapePos,
+    deleteShape,
     duplicateShape,
     clearCanvas,
     completeShape,
@@ -182,6 +183,7 @@ export default function CanvasShapesNew() {
           shapes={allShapes}
           onChangeShapePosition={changeShapePos}
           onDuplicateShape={duplicateShape}
+          onDeleteShape={deleteShape}
         />
       </div>
 
