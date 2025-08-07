@@ -103,7 +103,7 @@ export default function CanvasShapesNew() {
   };
 
   // Temporal approach to add an image to the canvas
-  const [mapImage] = useImage('./testmap.png');
+  const [mapImage] = useImage('./floorplan6.png');
   // Remove once is no longer needed
 
   return (
@@ -111,8 +111,8 @@ export default function CanvasShapesNew() {
       <div className="flex-1 overflow-hidden">
         <Stage
           // TODO set variables for these size values
-          width={3000}
-          height={1563}
+          width={5230}
+          height={5299}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onClick={handleStageClick}
@@ -122,13 +122,13 @@ export default function CanvasShapesNew() {
             This will require manual size setting and positioning
              Remove once is no longer needed
             */}
-            {/* <Image
+            <Image
               image={mapImage}
               x={0}
               y={0}
-              width={3000}
-              height={1563}
-            /> */}
+              width={5230}
+              height={5299}
+            />
             {/* This renders the created shapes */}
             {allShapes.map((shape) => (
               <ShapeRenderer

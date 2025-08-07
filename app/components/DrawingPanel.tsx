@@ -17,7 +17,7 @@ const DrawingPanel = ({
     { mode: 'qcurve' as const, label: 'Q-Curve' },
     // This is not implemented yet, but it's in the code so it's here for reference
     // { mode: 'bcurve' as const, label: 'B-Curve' }, // TODO: Implement BCurveShape component
-    { mode: 'linepolygon' as const, label: 'Regular Polygon' },
+    { mode: 'linepolygon' as const, label: 'Polygon' },
   ];
 
   return (
