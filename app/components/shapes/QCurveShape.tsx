@@ -69,7 +69,7 @@ const QCurveShape = ({
 
   const handleExtraPoint = (e: Konva.KonvaEventObject<MouseEvent>) => {
     if (onShapeUpdate && isClosed && e.type === 'dblclick' && e.evt.ctrlKey === true) {
-      const newPoint = { x: e.evt.x, y: e.evt.y };
+      const newPoint = { x: e.evt.layerX, y: e.evt.layerY };
       const tempPoints = [...shape.points];
 
       // Opening the shape for edition

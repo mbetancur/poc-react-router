@@ -33,7 +33,7 @@ export default function CanvasShapesNew() {
   const transformerRef = useRef<Konva.Transformer>(null);
 
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    const pos = e?.target?.getStage()?.getPointerPosition();
+    const pos = e?.target?.getStage()?.getRelativePointerPosition();
     if (!pos) return;
 
     let point: Point = { x: pos.x, y: pos.y };
@@ -72,7 +72,7 @@ export default function CanvasShapesNew() {
   };
 
   const handleMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    const pos = e?.target?.getStage()?.getPointerPosition();
+    const pos = e?.target?.getStage()?.getRelativePointerPosition();
     if (!pos) {
       updateMousePos(null);
       return;
@@ -125,16 +125,16 @@ export default function CanvasShapesNew() {
   };
 
   // Temporal approach to add an image to the canvas
-  const [mapImage] = useImage('./floorplan5.png');
+  const [mapImage] = useImage('./floorplan6.png');
   // Remove once is no longer needed
 
   return (
     <div className="flex h-screen">
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-auto">
         <Stage
           // TODO set variables for these size values
-          width={600}
-          height={832}
+          width={5230}
+          height={5299}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onClick={handleStageClick}
@@ -148,8 +148,8 @@ export default function CanvasShapesNew() {
               image={mapImage}
               x={0}
               y={0}
-              width={600}
-              height={832}
+              // width={600}
+              // height={832}
             />
             {/* This renders the created shapes */}
             {allShapes.map((shape) => (
@@ -205,44 +205,42 @@ export default function CanvasShapesNew() {
           onDuplicateShape={duplicateShape}
           onDeleteShape={deleteShape}
         />
-      </div>
-
-
-      {/* TODO create a component */}
-      {/* Dev info */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="bg-gray-800 text-white text-xs max-w-40">
-          <div>Cursor pos x: {state.currentMousePos?.x} y: {state.currentMousePos?.y}</ div>
-          <div>Mode: {state.drawingMode}</div>
-          <div>Shapes: {allShapes.length}</div>
-          <div>Selected: {selectedShape?.id || 'none'}</div>
-          <div>Drawing: {isDrawing ? 'yes' : 'no'}</div>
-          {state.activeDrawingShape && (
-            <div>Active: {state.activeDrawingShape.type} {(state.activeDrawingShape.type === 'qcurve' || state.activeDrawingShape.type === 'bcurve') && `(${state.activeDrawingShape.points.length} points)`}</div>
-          )}
-          {/* Temporal approach to export shapes 
+        {/* TODO create a component */}
+        {/* Dev info */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="bg-gray-800 text-white text-xs max-w-40 fixed bottom-0 right-0" >
+            <div>Cursor pos x: {state.currentMousePos?.x} y: {state.currentMousePos?.y}</ div>
+            <div>Mode: {state.drawingMode}</div>
+            <div>Shapes: {allShapes.length}</div>
+            <div>Selected: {selectedShape?.id || 'none'}</div>
+            <div>Drawing: {isDrawing ? 'yes' : 'no'}</div>
+            {state.activeDrawingShape && (
+              <div>Active: {state.activeDrawingShape.type} {(state.activeDrawingShape.type === 'qcurve' || state.activeDrawingShape.type === 'bcurve') && `(${state.activeDrawingShape.points.length} points)`}</div>
+            )}
+            {/* Temporal approach to export shapes 
             Remove once is no longer needed
           */}
-          <button
-            onClick={() => {
-              console.log(allShapes);
-              const dataStr = JSON.stringify(allShapes, null, 2);
-              const blob = new Blob([dataStr], { type: 'application/json' });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = 'shapes-export.json';
-              document.body.appendChild(a);
-              a.click();
-              document.body.removeChild(a);
-              URL.revokeObjectURL(url);
-            }}
-            className="bg-orange-500 "
-          >
-            Temporal export shapes
-          </button>
-        </div>
-      )}
+            <button
+              onClick={() => {
+                console.log(allShapes);
+                const dataStr = JSON.stringify(allShapes, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'shapes-export.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+              }}
+              className="bg-orange-500 "
+            >
+              Temporal export shapes
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 } 
