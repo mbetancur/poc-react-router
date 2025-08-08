@@ -5,7 +5,7 @@ import { useCanvasReducer } from "~/hooks/useCanvasReducer";
 import ShapeRenderer from "~/components/shapes/ShapeRenderer";
 import DrawingPanel from "~/components/DrawingPanel";
 import type { Point } from "~/types/canvas";
-import { shouldSnapToStart } from "~/utils/shapeFactory";
+import { shouldSnapToStart, constrainToCardinalDirections } from "~/utils/shapeFactory";
 import useImage from "use-image";
 import ShapesPanel from "~/components/ShapesPanel";
 
@@ -36,7 +36,7 @@ export default function CanvasShapesNew() {
     const pos = e?.target?.getStage()?.getPointerPosition();
     if (!pos) return;
 
-    const point: Point = { x: pos.x, y: pos.y };
+    let point: Point = { x: pos.x, y: pos.y };
 
     if (state.drawingMode === 'select') return;
 
@@ -44,6 +44,11 @@ export default function CanvasShapesNew() {
       const activeShape = state.activeDrawingShape;
 
       if (activeShape.type === "qcurve" || activeShape.type === "bcurve") {
+        if (e.evt.shiftKey && activeShape.points.length > 0) {
+          const lastPoint = activeShape.points[activeShape.points.length - 1];
+          point = constrainToCardinalDirections(point, lastPoint);
+        }
+
         // This checks if we should snap to start (complete the shape) w/ same initial point
         if (activeShape.points.length >= 3 &&
           shouldSnapToStart(point, activeShape.points[0])) {
@@ -68,7 +73,22 @@ export default function CanvasShapesNew() {
 
   const handleMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
     const pos = e?.target?.getStage()?.getPointerPosition();
-    updateMousePos(pos || null);
+    if (!pos) {
+      updateMousePos(null);
+      return;
+    }
+
+    if (e.evt.shiftKey && isDrawing && state.activeDrawingShape) {
+      const shape = state.activeDrawingShape;
+      if (shape.points.length > 0) {
+        const lastPoint = shape.points[shape.points.length - 1];
+        const constrainedPos = constrainToCardinalDirections(pos, lastPoint);
+        updateMousePos(constrainedPos);
+        return;
+      }
+    }
+
+    updateMousePos(pos);
   };
 
   const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {

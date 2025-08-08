@@ -123,4 +123,24 @@ export const shouldSnapToStart = (
   minPoints: number = 3
 ): boolean => {
   return getDistanceBetweenPoints(currentPos, startPoint) <= snapDistance;
+};
+
+export const constrainToCardinalDirections = (currentPoint: Point, referencePoint: Point): Point => {
+  const dx = currentPoint.x - referencePoint.x;
+  const dy = currentPoint.y - referencePoint.y;
+  
+  const absDx = Math.abs(dx);
+  const absDy = Math.abs(dy);
+  
+  if (absDx > absDy) {
+    return {
+      x: currentPoint.x,
+      y: referencePoint.y
+    };
+  } else {
+    return {
+      x: referencePoint.x,
+      y: currentPoint.y
+    };
+  }
 }; 
