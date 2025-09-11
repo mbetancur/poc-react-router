@@ -1,5 +1,5 @@
 import type Konva from "konva";
-import { useMemo, useEffect, useRef, type RefObject, useCallback } from "react";
+import { useMemo, useEffect, useRef, useState, type RefObject, useCallback } from "react";
 import { Circle, Line, Group, Shape, Text } from "react-konva";
 import type { QCurveShapeModel, Point } from "~/types/canvas";
 import { getDistanceBetweenPoints, getTwoClosestPoints, isShapeComplete } from "~/utils/shapeFactory";
@@ -34,6 +34,11 @@ const QCurveShape = ({
   ...rest
 }: QCurveShapeProps) => {
   const textRef = useRef<Konva.Text>(null);
+  const measureRef = useRef<Konva.Text>(null);
+
+  const [computedFontSize, setComputedFontSize] = useState<number>(12);
+  const [rotateVertical, setRotateVertical] = useState<boolean>(false);
+  const [measuredDims, setMeasuredDims] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
 
   const isClosed = useMemo(() => {
     return isShapeComplete(shape)
@@ -219,6 +224,37 @@ const QCurveShape = ({
     };
   }, [isClosed, shape.points, shape.controlPoints]);
 
+  // useEffect(() => {
+  //   if (!isClosed || !measureRef.current) return;
+
+  //   const padding = 8;
+  //   const availableWidth = Math.max(0, calculateShapeBounds.width - padding * 2);
+
+  //   const measureAt = (size: number) => {
+  //     const node = measureRef.current!;
+  //     node.fontSize(size);
+  //     const w = node.width();
+  //     const h = node.height();
+  //     return { w, h };
+  //   };
+
+  //   const { w: w8, h: h8 } = measureAt(8);
+  //   if (availableWidth < w8) {
+  //     setRotateVertical(true);
+  //     setComputedFontSize(8);
+  //     setMeasuredDims({ width: w8, height: h8 });
+  //     return;
+  //   }
+
+  //   const { w: w16, h: h16 } = measureAt(16);
+  //   if (availableWidth >= w16) {
+  //     setRotateVertical(false);
+  //     setComputedFontSize(16);
+  //     setMeasuredDims({ width: w16, height: h16 });
+  //     return;
+  //   }
+  // }, [isClosed, calculateShapeBounds.width]);
+
   // Set up shape bounds for transformer
   // This is needed because the transformer is not able to calculate the bounds of the shape
   // when the shape is a custom shape like qcurve
@@ -316,6 +352,34 @@ const QCurveShape = ({
         />
       )}
 
+      {/* {isClosed && (
+        <>
+          <Text
+            ref={measureRef}
+            visible={false}
+            listening={false}
+            text={shape.name || "Opportunity name"}
+            wrap="none"
+            align="left"
+          />
+          <Text
+            // TODO This is creating a bug when dragging 
+            // avoid bubbling up the event to the shape
+            // dragBoundFunc={textDragBoundFunc}
+            // draggable={isSelected}
+            fill="white"
+            fontSize={computedFontSize}
+            rotation={rotateVertical ? -90 : 0}
+            offsetX={measuredDims.width / 2}
+            offsetY={measuredDims.height / 2}
+            ref={textRef}
+            text={shape.name || "Opportunity name"}
+            x={textCenter.x}
+            y={textCenter.y}
+          />
+        </>
+      )} */}
+
       {isClosed && (
         <Text
           // TODO This is creating a bug when dragging 
@@ -323,7 +387,7 @@ const QCurveShape = ({
           // dragBoundFunc={textDragBoundFunc}
           // draggable={isSelected}
           fill="white"
-          fontSize={12} //TODO Calculate font size based on the text length and shape size
+          fontSize={12}
           offsetX={textDimensions.width / 2}
           offsetY={textDimensions.height / 2}
           ref={textRef}
