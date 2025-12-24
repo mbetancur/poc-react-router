@@ -3,6 +3,8 @@ import { useRef, type RefObject } from "react";
 import type { ShapeModel, Point } from "~/types/canvas";
 import QCurveShape from "./QCurveShape";
 import LinePolygonShape from "./LinePolygonShape";
+import { DRAWING_MODES } from "~/constants/canvas";
+import { PointSchema } from "~/schemas/canvas.schemas";
 
 interface ShapeRendererProps {
   shape: ShapeModel;
@@ -35,15 +37,17 @@ const ShapeRenderer = ({
     const transform = node._getAbsoluteTransform();
 
     // TODO add bcurve support
-    if (shape.type === "qcurve") {
+    if (shape.type === DRAWING_MODES.QCURVE) {
       const transformedPoints = shape.points.map((point) => {
         const transformedPoint = transform.point({ x: point.x, y: point.y });
-        return { x: transformedPoint.x, y: transformedPoint.y };
+        // Validate transformed point
+        return PointSchema.parse({ x: transformedPoint.x, y: transformedPoint.y });
       });
 
       const transformedControlPoints = shape.controlPoints.map((point) => {
         const transformedPoint = transform.point({ x: point.x, y: point.y });
-        return { x: transformedPoint.x, y: transformedPoint.y };
+        // Validate transformed control point
+        return PointSchema.parse({ x: transformedPoint.x, y: transformedPoint.y });
       });
 
       // Reset node transformation
@@ -56,11 +60,12 @@ const ShapeRenderer = ({
       node.y(0);
 
       onShapeUpdate({ points: transformedPoints, controlPoints: transformedControlPoints } as Partial<ShapeModel>);
-    } else if (shape.type === "linepolygon") {
+    } else if (shape.type === DRAWING_MODES.LINEPOLYGON) {
 
       const transformedPoints = shape.points.map((point) => {
         const transformedPoint = transform.point({ x: point.x, y: point.y });
-        return { x: transformedPoint.x, y: transformedPoint.y };
+        // Validate transformed point
+        return PointSchema.parse({ x: transformedPoint.x, y: transformedPoint.y });
       });
 
       node.scaleX(1);
@@ -106,12 +111,12 @@ const ShapeRenderer = ({
     const dy = node.y();
 
     if (dx !== 0 || dy !== 0) {
-      if (shape.type === "qcurve") {
-        const newPoints = shape.points.map(p => ({ x: p.x + dx, y: p.y + dy }));
-        const newControlPoints = shape.controlPoints.map(p => ({ x: p.x + dx, y: p.y + dy }));
+      if (shape.type === DRAWING_MODES.QCURVE) {
+        const newPoints = shape.points.map(p => PointSchema.parse({ x: p.x + dx, y: p.y + dy }));
+        const newControlPoints = shape.controlPoints.map(p => PointSchema.parse({ x: p.x + dx, y: p.y + dy }));
         onShapeUpdate({ points: newPoints, controlPoints: newControlPoints });
-      } else if (shape.type === "linepolygon") {
-        const newPoints = shape.points.map(p => ({ x: p.x + dx, y: p.y + dy }));
+      } else if (shape.type === DRAWING_MODES.LINEPOLYGON) {
+        const newPoints = shape.points.map(p => PointSchema.parse({ x: p.x + dx, y: p.y + dy }));
         onShapeUpdate({ points: newPoints });
       }
       node.x(0);
@@ -120,7 +125,7 @@ const ShapeRenderer = ({
   };
 
   switch (shape.type) {
-    case "qcurve":
+    case DRAWING_MODES.QCURVE:
       return (
         <QCurveShape
           currentMousePos={currentMousePos}
@@ -136,7 +141,7 @@ const ShapeRenderer = ({
           showAnchors={showAnchors}
         />
       );
-    case "bcurve":
+    case DRAWING_MODES.BCURVE:
       // TODO: Implement BCurveShape component
       return (
         <QCurveShape
@@ -150,7 +155,7 @@ const ShapeRenderer = ({
           onShapeUpdate={handleShapeUpdate}
         />
       );
-    case "linepolygon":
+    case DRAWING_MODES.LINEPOLYGON:
       return (
         <LinePolygonShape
           draggable={isSelected}

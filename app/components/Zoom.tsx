@@ -1,15 +1,10 @@
-import type { FC } from "react";
-
 interface ZoomProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
   className?: string;
 }
 
-/**
- * Fixed zoom control displayed in the bottom-right corner.
- */
-const Zoom: FC<ZoomProps> = ({ onZoomIn, onZoomOut, className }) => {
+const Zoom = ({ onZoomIn, onZoomOut, className }: ZoomProps) => {
   return (
     <div
       className={`fixed bottom-38 right-38 flex flex-col gap-2 drop-shadow-lg ${className ?? ""}`}
@@ -35,4 +30,3 @@ const Zoom: FC<ZoomProps> = ({ onZoomIn, onZoomOut, className }) => {
 };
 
 export default Zoom;
-

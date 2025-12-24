@@ -1,4 +1,5 @@
 import type { Point, ShapeModel, ShapeType, DrawingMode } from "~/types/canvas";
+import type { Direction } from "~/constants/canvas";
 
 // Shape Creation & Drawing Actions
 export interface StartDrawingAction {
@@ -76,7 +77,7 @@ export interface ChangeShapePos {
   type: 'CHANGE_SHAPE_POS';
   payload: {
     shape: ShapeModel,
-    direction: string
+    direction: Direction
   }
 }
 
@@ -126,7 +127,7 @@ export const canvasActions = {
     payload: { point }
   }),
 
-  changeShapePos: (shape: ShapeModel, direction: string): ChangeShapePos => ({
+  changeShapePos: (shape: ShapeModel, direction: Direction): ChangeShapePos => ({
     type: 'CHANGE_SHAPE_POS',
     payload: { shape, direction }
   }),

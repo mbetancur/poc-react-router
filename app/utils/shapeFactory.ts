@@ -1,4 +1,6 @@
 import type { Point, ShapeModel, ShapeType, QCurveShapeModel, BCurveShapeModel, LinePolygonShapeModel } from "~/types/canvas";
+import { DRAWING_MODES, DEFAULT_SHAPE_NAME } from "~/constants/canvas";
+import { PointSchema, QCurveShapeModelSchema, BCurveShapeModelSchema, LinePolygonShapeModelSchema } from "~/schemas/canvas.schemas";
 
 export const generateShapeId = (): string => {
   return `shape_${Math.random().toString(12)}-createdAt${Date.now()}`;
@@ -42,28 +44,44 @@ export const calculateQCurveControlPoints = (points: Point[]): Point[] => {
   return controlPoints;
 };
 
-export const createQCurveShape = (firstPoint: Point): QCurveShapeModel => ({
-  id: generateShapeId(),
-  type: "qcurve",
-  points: [firstPoint],
-  controlPoints: [],
-  name: "Opportunity name",
-  created: Date.now(),
-  modified: Date.now(),
-  ...getDefaultShapeStyles(),
-});
+export const createQCurveShape = (firstPoint: Point): QCurveShapeModel => {
+  // Validate input point
+  const validatedPoint = PointSchema.parse(firstPoint);
+  
+  const shape = {
+    id: generateShapeId(),
+    type: DRAWING_MODES.QCURVE,
+    points: [validatedPoint],
+    controlPoints: [],
+    name: DEFAULT_SHAPE_NAME,
+    created: Date.now(),
+    modified: Date.now(),
+    ...getDefaultShapeStyles(),
+  };
+  
+  // Validate the created shape
+  return QCurveShapeModelSchema.parse(shape);
+};
 
-export const createBCurveShape = (firstPoint: Point): BCurveShapeModel => ({
-  id: generateShapeId(),
-  type: "bcurve",
-  points: [firstPoint],
-  controlPoints1: [],
-  controlPoints2: [],
-  name: "Opportunity name",
-  created: Date.now(),
-  modified: Date.now(),
-  ...getDefaultShapeStyles(),
-});
+export const createBCurveShape = (firstPoint: Point): BCurveShapeModel => {
+  // Validate input point
+  const validatedPoint = PointSchema.parse(firstPoint);
+  
+  const shape = {
+    id: generateShapeId(),
+    type: DRAWING_MODES.BCURVE,
+    points: [validatedPoint],
+    controlPoints1: [],
+    controlPoints2: [],
+    name: DEFAULT_SHAPE_NAME,
+    created: Date.now(),
+    modified: Date.now(),
+    ...getDefaultShapeStyles(),
+  };
+  
+  // Validate the created shape
+  return BCurveShapeModelSchema.parse(shape);
+};
 
 const createPolygonPoints = (startPoint: Point, distance: number = 100): Point[] => {
   const points: Point[] = [
@@ -74,26 +92,34 @@ const createPolygonPoints = (startPoint: Point, distance: number = 100): Point[]
   return points;
 };
 
-export const createLinePolygonShape = (startPoint: Point): LinePolygonShapeModel => ({
-  id: generateShapeId(),
-  type: "linepolygon",
-  points: createPolygonPoints(startPoint),
-  name: "Opportunity name",
-  created: Date.now(),
-  modified: Date.now(),
-  ...getDefaultShapeStyles(),
-  x: startPoint.x,
-  y: startPoint.y,
-});
+export const createLinePolygonShape = (startPoint: Point): LinePolygonShapeModel => {
+  // Validate input point
+  const validatedPoint = PointSchema.parse(startPoint);
+  
+  const shape = {
+    id: generateShapeId(),
+    type: DRAWING_MODES.LINEPOLYGON,
+    points: createPolygonPoints(validatedPoint),
+    name: DEFAULT_SHAPE_NAME,
+    created: Date.now(),
+    modified: Date.now(),
+    ...getDefaultShapeStyles(),
+    x: validatedPoint.x,
+    y: validatedPoint.y,
+  };
+  
+  // Validate the created shape
+  return LinePolygonShapeModelSchema.parse(shape);
+};
 
 export const createShapeByType = (shapeType: ShapeType, point: Point): ShapeModel => {
   // Add new shapes here
   switch (shapeType) {
-    case "qcurve":
+    case DRAWING_MODES.QCURVE:
       return createQCurveShape(point);
-    case "bcurve":
+    case DRAWING_MODES.BCURVE:
       return createBCurveShape(point);
-    case "linepolygon":
+    case DRAWING_MODES.LINEPOLYGON:
       return createLinePolygonShape(point);
     default:
       throw new Error(`Unknown shape type: ${shapeType}`);
@@ -102,11 +128,11 @@ export const createShapeByType = (shapeType: ShapeType, point: Point): ShapeMode
 
 export const isShapeComplete = (shape: ShapeModel): boolean => {
   switch (shape.type) {
-    case "qcurve":
-    case "bcurve":
+    case DRAWING_MODES.QCURVE:
+    case DRAWING_MODES.BCURVE:
       return shape.points.length >= 3 && shape.points[0].x === shape.points[shape.points.length - 1].x
         && shape.points[0].y === shape.points[shape.points.length - 1].y;
-    case "linepolygon":
+    case DRAWING_MODES.LINEPOLYGON:
       return true; // Polygons are completed shapes by default
     default:
       return false;

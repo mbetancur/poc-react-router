@@ -1,8 +1,10 @@
 import type { ShapeModel } from "~/types/canvas";
+import type { Direction } from "~/constants/canvas";
+import { DIRECTIONS } from "~/constants/canvas";
 
 interface ShapePanelProps {
   shapes: ShapeModel[];
-  onChangeShapePosition: (shape: ShapeModel, direction: string) => void;
+  onChangeShapePosition: (shape: ShapeModel, direction: Direction) => void;
   onDuplicateShape: (shapeId: string) => void;
   onDeleteShape: (shapeId: string) => void;
 }
@@ -25,8 +27,8 @@ const ShapesPanel = ({ shapes, onChangeShapePosition, onDuplicateShape, onDelete
                     {shape.id}
                   </td>
                   <td>
-                    <button onClick={() => onChangeShapePosition(shape, 'up')}>⬆️</button>
-                    <button onClick={() => onChangeShapePosition(shape, 'down')}>⬇️</button>
+                    <button onClick={() => onChangeShapePosition(shape, DIRECTIONS.UP)}>⬆️</button>
+                    <button onClick={() => onChangeShapePosition(shape, DIRECTIONS.DOWN)}>⬇️</button>
                     <button onClick={() => onDuplicateShape(shape.id)}>🔀</button>
                     <button onClick={() => onDeleteShape(shape.id)} className="text-red-500">🗑️</button>
                   </td>

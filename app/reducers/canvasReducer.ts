@@ -1,11 +1,25 @@
 import type { CanvasState, ShapeModel } from "~/types/canvas";
 import type { CanvasAction } from "./canvasActions";
 import { createShapeByType, calculateQCurveControlPoints, isShapeComplete, shouldSnapToStart } from "~/utils/shapeFactory";
+import { DRAWING_MODES, DIRECTIONS, DUPLICATE_OFFSET } from "~/constants/canvas";
+import type { Point } from "~/types/canvas";
+import {
+  StartDrawingPayloadSchema,
+  AddPointPayloadSchema,
+  ChangeShapePosPayloadSchema,
+  SelectShapePayloadSchema,
+  UpdateShapePayloadSchema,
+  TransformShapePayloadSchema,
+  DeleteShapePayloadSchema,
+  DuplicateShapePayloadSchema,
+  SetDrawingModePayloadSchema,
+  UpdateMousePosPayloadSchema,
+} from "~/schemas/canvas.schemas";
 
 export const initialCanvasState: CanvasState = {
   activeDrawingShape: null,
   currentMousePos: null,
-  drawingMode: 'select',
+  drawingMode: DRAWING_MODES.SELECT,
   selectedShapeId: null,
   shapes: new Map(),
   // showGrid: false,
@@ -16,7 +30,8 @@ export const initialCanvasState: CanvasState = {
 export const canvasReducer = (state: CanvasState, action: CanvasAction): CanvasState => {
   switch (action.type) {
     case 'START_DRAWING': {
-      const { shapeType, point } = action.payload;
+      const validatedPayload = StartDrawingPayloadSchema.parse(action.payload);
+      const { shapeType, point } = validatedPayload;
 
       if (state.activeDrawingShape) {
         return state;
@@ -32,7 +47,8 @@ export const canvasReducer = (state: CanvasState, action: CanvasAction): CanvasS
     }
 
     case 'ADD_POINT': {
-      const { point } = action.payload;
+      const validatedPayload = AddPointPayloadSchema.parse(action.payload);
+      const { point } = validatedPayload;
 
       if (!state.activeDrawingShape) {
         return state;
@@ -41,13 +57,13 @@ export const canvasReducer = (state: CanvasState, action: CanvasAction): CanvasS
       const shape = state.activeDrawingShape;
 
       // TODO Consider creating diff cases for diff shapes and make this shorter
-      if (shape.type === "qcurve" || shape.type === "bcurve") {
+      if (shape.type === DRAWING_MODES.QCURVE || shape.type === DRAWING_MODES.BCURVE) {
         // TODO Im validating this twice, check if needed or remove
         if (shape.points.length >= 3 && shouldSnapToStart(point, shape.points[0])) {
           const closedPoints = [...shape.points, shape.points[0]];
           let updatedShape: ShapeModel;
 
-          if (shape.type === "qcurve") {
+          if (shape.type === DRAWING_MODES.QCURVE) {
             updatedShape = {
               ...shape,
               points: closedPoints,
@@ -74,7 +90,7 @@ export const canvasReducer = (state: CanvasState, action: CanvasAction): CanvasS
         const newPoints = [...shape.points, point];
         let updatedShape: ShapeModel;
 
-        if (shape.type === "qcurve") {
+        if (shape.type === DRAWING_MODES.QCURVE) {
           updatedShape = {
             ...shape,
             points: newPoints,
@@ -105,7 +121,8 @@ export const canvasReducer = (state: CanvasState, action: CanvasAction): CanvasS
         return state;
       }
 
-      const { shape, direction } = action.payload
+      const validatedPayload = ChangeShapePosPayloadSchema.parse(action.payload);
+      const { shape, direction } = validatedPayload
       const shapesArray = Array.from(state.shapes);
       // TODO consider sending the index instead
       const insertIndex = shapesArray.findIndex(sh => sh[0] === shape.id)
@@ -115,15 +132,14 @@ export const canvasReducer = (state: CanvasState, action: CanvasAction): CanvasS
         return state
       }
       // This avoids side effects on first and last item
-      // TODO create type for direction
-      else if ((insertIndex === 0 && direction === "up") || insertIndex === state.shapes.size - 1 && direction === "down") return state
+      else if ((insertIndex === 0 && direction === DIRECTIONS.UP) || insertIndex === state.shapes.size - 1 && direction === DIRECTIONS.DOWN) return state
 
       const tempShape = shapesArray.splice(insertIndex, 1)[0]
 
-      if (direction === "up") {
+      if (direction === DIRECTIONS.UP) {
         shapesArray.splice(insertIndex - 1, 0, tempShape)
       }
-      else if (direction === "down") {
+      else if (direction === DIRECTIONS.DOWN) {
         shapesArray.splice(insertIndex + 1, 0, tempShape)
       }
       else {
@@ -144,7 +160,7 @@ export const canvasReducer = (state: CanvasState, action: CanvasAction): CanvasS
 
       const shape = state.activeDrawingShape;
 
-      if (shape.type === "linepolygon") {
+      if (shape.type === DRAWING_MODES.LINEPOLYGON) {
         return {
           ...state,
           shapes: new Map(state.shapes).set(shape.id, shape),
@@ -155,7 +171,7 @@ export const canvasReducer = (state: CanvasState, action: CanvasAction): CanvasS
 
       // TODO Consider removing this due Completion of curves is done manually
       // or extend this method to complete all kind of shapes
-      if ((shape.type === "qcurve" || shape.type === "bcurve") && shape.points.length >= 3) {
+      if ((shape.type === DRAWING_MODES.QCURVE || shape.type === DRAWING_MODES.BCURVE) && shape.points.length >= 3) {
         const updatedShape: ShapeModel = {
           ...shape,
           modified: Date.now(),
@@ -180,7 +196,8 @@ export const canvasReducer = (state: CanvasState, action: CanvasAction): CanvasS
     }
 
     case 'SELECT_SHAPE': {
-      const { shapeId } = action.payload;
+      const validatedPayload = SelectShapePayloadSchema.parse(action.payload);
+      const { shapeId } = validatedPayload;
 
       return {
         ...state,
@@ -197,14 +214,15 @@ export const canvasReducer = (state: CanvasState, action: CanvasAction): CanvasS
     }
 
     case 'UPDATE_SHAPE': {
-      const { shapeId, updates } = action.payload;
+      const validatedPayload = UpdateShapePayloadSchema.parse(action.payload);
+      const { shapeId, updates } = validatedPayload;
       const existingShape = state.shapes.get(shapeId);
 
       if (!existingShape) {
         return state;
       }
 
-      if (existingShape.type === "qcurve" && updates?.points) {
+      if (existingShape.type === DRAWING_MODES.QCURVE && updates?.points) {
         updates.controlPoints = calculateQCurveControlPoints(updates?.points);
       }
 
@@ -222,7 +240,8 @@ export const canvasReducer = (state: CanvasState, action: CanvasAction): CanvasS
     }
 
     case 'TRANSFORM_SHAPE': {
-      const { shapeId, ...transform } = action.payload;
+      const validatedPayload = TransformShapePayloadSchema.parse(action.payload);
+      const { shapeId, ...transform } = validatedPayload;
       const existingShape = state.shapes.get(shapeId);
 
       if (!existingShape) {
@@ -231,7 +250,7 @@ export const canvasReducer = (state: CanvasState, action: CanvasAction): CanvasS
 
       let updatedShape: ShapeModel;
 
-      if (existingShape.type === "qcurve" && transform.points) {
+      if (existingShape.type === DRAWING_MODES.QCURVE && transform.points) {
         updatedShape = {
           ...existingShape,
           ...transform,
@@ -253,7 +272,8 @@ export const canvasReducer = (state: CanvasState, action: CanvasAction): CanvasS
     }
 
     case 'DELETE_SHAPE': {
-      const { shapeId } = action.payload;
+      const validatedPayload = DeleteShapePayloadSchema.parse(action.payload);
+      const { shapeId } = validatedPayload;
       const newShapes = new Map(state.shapes);
       newShapes.delete(shapeId);
 
@@ -265,17 +285,18 @@ export const canvasReducer = (state: CanvasState, action: CanvasAction): CanvasS
     }
 
     case 'DUPLICATE_SHAPE': {
-      const { shapeId } = action.payload;
+      const validatedPayload = DuplicateShapePayloadSchema.parse(action.payload);
+      const { shapeId } = validatedPayload;
       const original = state.shapes.get(shapeId);
       if (!original) return state;
 
       const now = Date.now();
       const newId = crypto.randomUUID();
 
-      const offsetPoint = (p: Point) => ({ x: p.x + 12, y: p.y + 12 });
+      const offsetPoint = (p: Point) => ({ x: p.x + DUPLICATE_OFFSET, y: p.y + DUPLICATE_OFFSET });
 
       let duplicated: ShapeModel;
-      if (original.type === 'qcurve') {
+      if (original.type === DRAWING_MODES.QCURVE) {
         duplicated = {
           ...original,
           id: newId,
@@ -285,7 +306,7 @@ export const canvasReducer = (state: CanvasState, action: CanvasAction): CanvasS
           created: now,
           modified: now,
         };
-      } else if (original.type === 'bcurve') {
+      } else if (original.type === DRAWING_MODES.BCURVE) {
         duplicated = {
           ...original,
           id: newId,
@@ -324,18 +345,20 @@ export const canvasReducer = (state: CanvasState, action: CanvasAction): CanvasS
     }
 
     case 'SET_DRAWING_MODE': {
-      const { mode } = action.payload;
+      const validatedPayload = SetDrawingModePayloadSchema.parse(action.payload);
+      const { mode } = validatedPayload;
 
       return {
         ...state,
         drawingMode: mode,
         activeDrawingShape: null,
-        selectedShapeId: mode === 'select' ? state.selectedShapeId : null,
+        selectedShapeId: mode === DRAWING_MODES.SELECT ? state.selectedShapeId : null,
       };
     }
 
     case 'UPDATE_MOUSE_POS': {
-      const { pos } = action.payload;
+      const validatedPayload = UpdateMousePosPayloadSchema.parse(action.payload);
+      const { pos } = validatedPayload;
 
       return {
         ...state,

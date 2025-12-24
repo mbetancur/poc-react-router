@@ -1,13 +1,16 @@
 import type Konva from "konva";
-import { useRef, type RefObject } from "react";
+import { useRef, type RefObject, useState } from "react";
 import { Layer, Stage, Transformer, Image } from "react-konva";
 import { useCanvasReducer } from "~/hooks/useCanvasReducer";
 import ShapeRenderer from "~/components/shapes/ShapeRenderer";
 import DrawingPanel from "~/components/DrawingPanel";
+import Zoom from "~/components/Zoom";
 import type { Point } from "~/types/canvas";
 import { shouldSnapToStart, constrainToCardinalDirections } from "~/utils/shapeFactory";
 import useImage from "use-image";
 import ShapesPanel from "~/components/ShapesPanel";
+import { DRAWING_MODES, CANVAS_WIDTH, CANVAS_HEIGHT, MIN_TRANSFORM_SIZE, TRANSFORMER_PADDING } from "~/constants/canvas";
+import { ShapeArraySchema } from "~/schemas/canvas.schemas";
 
 export default function CanvasShapesNew() {
   const {
@@ -31,6 +34,15 @@ export default function CanvasShapesNew() {
   } = useCanvasReducer();
 
   const transformerRef = useRef<Konva.Transformer>(null);
+  const [zoomLevel, setZoomLevel] = useState(1);
+
+  const handleZoomIn = () => {
+    setZoomLevel((prev) => Math.min(prev + 0.1, 5));
+  };
+
+  const handleZoomOut = () => {
+    setZoomLevel((prev) => Math.max(prev - 0.1, 0.1));
+  };
 
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
     const pos = e?.target?.getStage()?.getRelativePointerPosition();
@@ -38,12 +50,12 @@ export default function CanvasShapesNew() {
 
     let point: Point = { x: pos.x, y: pos.y };
 
-    if (state.drawingMode === 'select') return;
+    if (state.drawingMode === DRAWING_MODES.SELECT) return;
 
     if (isDrawing && state.activeDrawingShape) {
       const activeShape = state.activeDrawingShape;
 
-      if (activeShape.type === "qcurve" || activeShape.type === "bcurve") {
+      if (activeShape.type === DRAWING_MODES.QCURVE || activeShape.type === DRAWING_MODES.BCURVE) {
         if (e.evt.shiftKey && activeShape.points.length > 0) {
           const lastPoint = activeShape.points[activeShape.points.length - 1];
           point = constrainToCardinalDirections(point, lastPoint);
@@ -62,8 +74,8 @@ export default function CanvasShapesNew() {
     }
 
     if (!isDrawing) {
-      if (state.drawingMode === 'linepolygon') {
-        startDrawing('linepolygon', point);
+      if (state.drawingMode === DRAWING_MODES.LINEPOLYGON) {
+        startDrawing(DRAWING_MODES.LINEPOLYGON, point);
         completeShape();
       } else {
         startDrawing(state.drawingMode, point);
@@ -92,7 +104,7 @@ export default function CanvasShapesNew() {
   };
 
   const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    if (e.target === e.target.getStage() && selectedShape && state.drawingMode === 'select') {
+    if (e.target === e.target.getStage() && selectedShape && state.drawingMode === DRAWING_MODES.SELECT) {
       deselectShape();
       if (transformerRef.current) {
         transformerRef.current.nodes([]);
@@ -101,8 +113,7 @@ export default function CanvasShapesNew() {
   };
 
   const handleShapeSelect = (shapeId: string, selectedShapeRef: RefObject<Konva.Shape>) => {
-    //TODO extract modes in consts
-    if (state.drawingMode === 'select') {
+    if (state.drawingMode === DRAWING_MODES.SELECT) {
       selectShape(shapeId);
 
       //TODO check the diff with nextTick
@@ -132,12 +143,13 @@ export default function CanvasShapesNew() {
     <div className="flex h-screen">
       <div className="flex-1 overflow-auto">
         <Stage
-          // TODO set variables for these size values
-          width={5230}
-          height={5299}
+          width={CANVAS_WIDTH}
+          height={CANVAS_HEIGHT}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onClick={handleStageClick}
+          scaleX={zoomLevel}
+          scaleY={zoomLevel}
         >
           <Layer>
             {/* Image temporal approach
@@ -174,13 +186,13 @@ export default function CanvasShapesNew() {
               />
             )}
 
-            {selectedShape && state.drawingMode === 'select' && (
+            {selectedShape && state.drawingMode === DRAWING_MODES.SELECT && (
               <Transformer
                 ref={transformerRef}
-                padding={20}
+                padding={TRANSFORMER_PADDING}
                 boundBoxFunc={(oldBox, newBox) => {
                   // TODO add max size?
-                  if (Math.abs(newBox.width) < 50 || Math.abs(newBox.height) < 50) {
+                  if (Math.abs(newBox.width) < MIN_TRANSFORM_SIZE || Math.abs(newBox.height) < MIN_TRANSFORM_SIZE) {
                     return oldBox;
                   }
                   return newBox;
@@ -190,6 +202,7 @@ export default function CanvasShapesNew() {
             )}
           </Layer>
         </Stage>
+        <Zoom onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} />
       </div>
 
       {/* TODO create proper Side Panel component for these */}
@@ -215,28 +228,38 @@ export default function CanvasShapesNew() {
             <div>Selected: {selectedShape?.id || 'none'}</div>
             <div>Drawing: {isDrawing ? 'yes' : 'no'}</div>
             {state.activeDrawingShape && (
-              <div>Active: {state.activeDrawingShape.type} {(state.activeDrawingShape.type === 'qcurve' || state.activeDrawingShape.type === 'bcurve') && `(${state.activeDrawingShape.points.length} points)`}</div>
+              <div>Active: {state.activeDrawingShape.type} {(state.activeDrawingShape.type === DRAWING_MODES.QCURVE || state.activeDrawingShape.type === DRAWING_MODES.BCURVE) && `(${state.activeDrawingShape.points.length} points)`}</div>
             )}
             {/* Temporal approach to export shapes 
             Remove once is no longer needed
           */}
             <button
               onClick={() => {
-                console.log(allShapes);
-                const dataStr = JSON.stringify(allShapes, null, 2);
-                const blob = new Blob([dataStr], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'shapes-export.json';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
+                try {
+                  // Validate shapes before export
+                  const validatedShapes = ShapeArraySchema.parse(allShapes);
+                  console.log('Validated shapes:', validatedShapes);
+                  
+                  const dataStr = JSON.stringify(validatedShapes, null, 2);
+                  const blob = new Blob([dataStr], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `shapes-export-${Date.now()}.json`;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                  
+                  alert(`Successfully exported ${validatedShapes.length} shape(s)!`);
+                } catch (error) {
+                  console.error('Export validation error:', error);
+                  alert('Failed to export shapes. Some shapes may have invalid data. Check console for details.');
+                }
               }}
               className="bg-orange-500 "
             >
-              Temporal export shapes
+              Export shapes (validated)
             </button>
           </div>
         )}

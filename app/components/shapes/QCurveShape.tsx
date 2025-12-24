@@ -3,9 +3,8 @@ import { useMemo, useEffect, useRef, useState, type RefObject, useCallback } fro
 import { Circle, Line, Group, Shape, Text } from "react-konva";
 import type { QCurveShapeModel, Point } from "~/types/canvas";
 import { getDistanceBetweenPoints, getTwoClosestPoints, isShapeComplete } from "~/utils/shapeFactory";
-
-export const SNAP_DISTANCE = 20;
-export const MIN_POINTS_FOR_SNAP = 3;
+import { SNAP_DISTANCE, MIN_POINTS_FOR_SNAP } from "~/constants/canvas";
+import { calculateCentroid, getTextDimensions, createTextDragBoundFunc, calculateShapeBounds } from "~/utils/shapeHelpers";
 
 interface QCurveShapeProps extends Konva.ShapeConfig {
   currentMousePos?: Point | null;
@@ -150,78 +149,27 @@ const QCurveShape = ({
   // TODO This is creating a bug when dragging the text
   // avoid bubbling up the event to the shape
   // DONT REMOVE THIS FUNCTION
-  const textDragBoundFunc = (pos: Point): Point => {
-    if (ref?.current && textRef.current) {
-      if (ref.current.intersects(pos)) {
-        return pos;
-      }
-      return textRef.current.position();
-    }
-    return pos;
-  };
+  const textDragBoundFunc = useMemo(() => createTextDragBoundFunc(ref as React.RefObject<Konva.Shape | null>, textRef), [ref, textRef]);
 
   const textCenter: Point = useMemo(() => {
     if (!isClosed || shape.points.length < 2) {
       return { x: 0, y: 0 };
     }
-    // Calculate centroid using shoelace formula
-    const areaConstant = 0.5;
-    const centerConstant = 6;
-
-    let areaSum = 0;
-    let sumCenterX = 0;
-    let sumCenterY = 0;
-
-    for (let i = 0; i < shape.points.length - 1; i++) {
-      const { x, y } = shape.points[i];
-      const { x: x1, y: y1 } = shape.points[i + 1];
-
-      areaSum = (x * y1) - (x1 * y) + areaSum;
-      sumCenterX = (x + x1) * (x * y1 - x1 * y) + sumCenterX;
-      sumCenterY = (y + y1) * (x * y1 - x1 * y) + sumCenterY;
-    }
-
-    const area = areaConstant * areaSum;
-    const centerX = sumCenterX / (centerConstant * area);
-    const centerY = sumCenterY / (centerConstant * area);
-
-    return { x: centerX, y: centerY };
+    return calculateCentroid(shape.points, true);
   }, [isClosed, shape.points]);
 
   const textDimensions = useMemo(() => {
     if (isClosed && textRef.current) {
-      return {
-        width: textRef.current.width(),
-        height: textRef.current.height()
-      };
+      return getTextDimensions(textRef.current);
     }
     return { width: 0, height: 0 };
   }, [textRef.current, isClosed, shape.points, shape.controlPoints]);
 
-  const calculateShapeBounds = useMemo(() => {
+  const shapeBounds = useMemo(() => {
     if (!isClosed || shape.points.length < 2) {
       return { x: 0, y: 0, width: 0, height: 0 };
     }
-
-    const allPoints = [...shape.points, ...shape.controlPoints];
-    let minX = allPoints[0].x;
-    let maxX = allPoints[0].x;
-    let minY = allPoints[0].y;
-    let maxY = allPoints[0].y;
-
-    for (const point of allPoints) {
-      minX = Math.min(minX, point.x);
-      maxX = Math.max(maxX, point.x);
-      minY = Math.min(minY, point.y);
-      maxY = Math.max(maxY, point.y);
-    }
-
-    return {
-      x: minX,
-      y: minY,
-      width: maxX - minX,
-      height: maxY - minY
-    };
+    return calculateShapeBounds(shape.points, shape.controlPoints);
   }, [isClosed, shape.points, shape.controlPoints]);
 
   // useEffect(() => {
@@ -260,11 +208,11 @@ const QCurveShape = ({
   // when the shape is a custom shape like qcurve
   useEffect(() => {
     if (ref?.current) {
-      ref.current.getSelfRect = () => calculateShapeBounds;
+      ref.current.getSelfRect = () => shapeBounds;
     }
     onRestartTransformer?.(ref as RefObject<Konva.Shape>);
 
-  }, [calculateShapeBounds, ref]);
+  }, [shapeBounds, ref, onRestartTransformer]);
 
   return (
     <Group {...rest}>

@@ -1,4 +1,5 @@
 import type { DrawingMode } from "~/types/canvas";
+import { DRAWING_MODES } from "~/constants/canvas";
 
 interface DrawingPanelProps {
   currentMode: DrawingMode;
@@ -12,12 +13,11 @@ const DrawingPanel = ({
   onClearCanvas,
 }: DrawingPanelProps) => {
   const tools = [
-    // TODO create const for these modes
-    { mode: 'select' as const, label: 'Select' },
-    { mode: 'qcurve' as const, label: 'Q-Curve' },
-    // This is not implemented yet, but it's in the code so it's here for reference
-    // { mode: 'bcurve' as const, label: 'B-Curve' }, // TODO: Implement BCurveShape component
-    { mode: 'linepolygon' as const, label: 'Polygon' },
+    { mode: DRAWING_MODES.SELECT as DrawingMode, label: 'Select' },
+    { mode: DRAWING_MODES.QCURVE as DrawingMode, label: 'Q-Curve' },
+    // // TODO: This is not implemented yet, but it's in the code so it's here for reference
+    // { mode: DRAWING_MODES.BCURVE as DrawingMode, label: 'B-Curve' }, 
+    { mode: DRAWING_MODES.LINEPOLYGON as DrawingMode, label: 'Polygon' },
   ];
 
   return (
