@@ -219,7 +219,7 @@ export default function CanvasShapesNew() {
           onDuplicateShape={duplicateShape}
           onDeleteShape={deleteShape}
         />
-        {process.env.NODE_ENV === 'development' && import.meta.env.VITE_DISPLAY_DEV_INFO === true && (
+        {process.env.NODE_ENV === 'development' && import.meta.env.VITE_DISPLAY_DEV_INFO === "activate" && (
           <DevInfo
             currentMousePos={state.currentMousePos}
             drawingMode={state.drawingMode}
