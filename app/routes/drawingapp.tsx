@@ -6,6 +6,7 @@ import ShapeRenderer from "~/components/shapes/ShapeRenderer";
 import DrawingPanel from "~/components/DrawingPanel";
 import Zoom from "~/components/Zoom";
 import DevInfo from "~/components/DevInfo";
+import BackgroundImageUpload from "~/components/BackgroundImageUpload";
 import type { Point } from "~/types/canvas";
 import { shouldSnapToStart, constrainToCardinalDirections } from "~/utils/shapeFactory";
 import useImage from "use-image";
@@ -35,6 +36,7 @@ export default function CanvasShapesNew() {
 
   const transformerRef = useRef<Konva.Transformer>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [backgroundImageUrl, setBackgroundImageUrl] = useState<string | null>(null);
 
   const handleZoomIn = () => {
     setZoomLevel((prev) => Math.min(prev + 0.1, 5));
@@ -135,9 +137,7 @@ export default function CanvasShapesNew() {
     }
   };
 
-  // Temporal approach to add an image to the canvas
-  const [mapImage] = useImage('./floorplan6.png');
-  // Remove once is no longer needed
+  const [mapImage] = useImage(backgroundImageUrl || '');
 
   return (
     <div className="flex h-screen">
@@ -152,17 +152,13 @@ export default function CanvasShapesNew() {
           scaleY={zoomLevel}
         >
           <Layer>
-            {/* Image temporal approach
-            This will require manual size setting and positioning
-             Remove once is no longer needed
-            */}
-            <Image
-              image={mapImage}
-              x={0}
-              y={0}
-            // width={600}
-            // height={832}
-            />
+            {mapImage && (
+              <Image
+                image={mapImage}
+                x={0}
+                y={0}
+              />
+            )}
             {/* This renders the created shapes */}
             {allShapes.map((shape) => (
               <ShapeRenderer
@@ -211,6 +207,11 @@ export default function CanvasShapesNew() {
           currentMode={state.drawingMode}
           onModeChange={setDrawingMode}
           onClearCanvas={clearCanvas}
+        />
+        <BackgroundImageUpload
+          onImageUpload={setBackgroundImageUrl}
+          onImageRemove={() => setBackgroundImageUrl(null)}
+          currentImageUrl={backgroundImageUrl}
         />
         <ShapesPanel
           shapes={allShapes}
