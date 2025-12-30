@@ -5,19 +5,10 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
-  type LinksFunction,
 } from "react-router";
 
 import type { Route } from "./+types/root";
 import "./app.css";
-
-export const links: LinksFunction = () => {
-  return [
-    {
-      rel:"stylesheet", href: "./resources/custom.css",
-    }
-  ]
-}
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (

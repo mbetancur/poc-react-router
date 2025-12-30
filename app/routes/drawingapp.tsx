@@ -61,7 +61,7 @@ export default function CanvasShapesNew() {
           point = constrainToCardinalDirections(point, lastPoint);
         }
 
-        // This checks if we should snap to start (complete the shape) w/ same initial point
+        // This checks if we should snap to start & close (complete the shape) w/ same initial point
         if (activeShape.points.length >= 3 &&
           shouldSnapToStart(point, activeShape.points[0])) {
           addPoint(activeShape.points[0]);
