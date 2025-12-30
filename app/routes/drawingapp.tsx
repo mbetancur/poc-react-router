@@ -5,12 +5,12 @@ import { useCanvasReducer } from "~/hooks/useCanvasReducer";
 import ShapeRenderer from "~/components/shapes/ShapeRenderer";
 import DrawingPanel from "~/components/DrawingPanel";
 import Zoom from "~/components/Zoom";
+import DevInfo from "~/components/DevInfo";
 import type { Point } from "~/types/canvas";
 import { shouldSnapToStart, constrainToCardinalDirections } from "~/utils/shapeFactory";
 import useImage from "use-image";
 import ShapesPanel from "~/components/ShapesPanel";
 import { DRAWING_MODES, CANVAS_WIDTH, CANVAS_HEIGHT, MIN_TRANSFORM_SIZE, TRANSFORMER_PADDING } from "~/constants/canvas";
-import { ShapeArraySchema } from "~/schemas/canvas.schemas";
 
 export default function CanvasShapesNew() {
   const {
@@ -160,8 +160,8 @@ export default function CanvasShapesNew() {
               image={mapImage}
               x={0}
               y={0}
-              // width={600}
-              // height={832}
+            // width={600}
+            // height={832}
             />
             {/* This renders the created shapes */}
             {allShapes.map((shape) => (
@@ -218,50 +218,15 @@ export default function CanvasShapesNew() {
           onDuplicateShape={duplicateShape}
           onDeleteShape={deleteShape}
         />
-        {/* TODO create a component */}
-        {/* Dev info */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="bg-gray-800 text-white text-xs max-w-40 fixed bottom-0 right-0" >
-            <div>Cursor pos x: {state.currentMousePos?.x} y: {state.currentMousePos?.y}</ div>
-            <div>Mode: {state.drawingMode}</div>
-            <div>Shapes: {allShapes.length}</div>
-            <div>Selected: {selectedShape?.id || 'none'}</div>
-            <div>Drawing: {isDrawing ? 'yes' : 'no'}</div>
-            {state.activeDrawingShape && (
-              <div>Active: {state.activeDrawingShape.type} {(state.activeDrawingShape.type === DRAWING_MODES.QCURVE || state.activeDrawingShape.type === DRAWING_MODES.BCURVE) && `(${state.activeDrawingShape.points.length} points)`}</div>
-            )}
-            {/* Temporal approach to export shapes 
-            Remove once is no longer needed
-          */}
-            <button
-              onClick={() => {
-                try {
-                  // Validate shapes before export
-                  const validatedShapes = ShapeArraySchema.parse(allShapes);
-                  console.log('Validated shapes:', validatedShapes);
-                  
-                  const dataStr = JSON.stringify(validatedShapes, null, 2);
-                  const blob = new Blob([dataStr], { type: 'application/json' });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = `shapes-export-${Date.now()}.json`;
-                  document.body.appendChild(a);
-                  a.click();
-                  document.body.removeChild(a);
-                  URL.revokeObjectURL(url);
-                  
-                  alert(`Successfully exported ${validatedShapes.length} shape(s)!`);
-                } catch (error) {
-                  console.error('Export validation error:', error);
-                  alert('Failed to export shapes. Some shapes may have invalid data. Check console for details.');
-                }
-              }}
-              className="bg-orange-500 "
-            >
-              Export shapes (validated)
-            </button>
-          </div>
+        {process.env.NODE_ENV === 'development' && import.meta.env.DISPLAY_DEV_INFO && (
+          <DevInfo
+            currentMousePos={state.currentMousePos}
+            drawingMode={state.drawingMode}
+            shapes={allShapes}
+            selectedShapeId={selectedShape?.id || null}
+            isDrawing={isDrawing}
+            activeDrawingShape={state.activeDrawingShape}
+          />
         )}
       </div>
     </div>
