@@ -1,5 +1,5 @@
 import type Konva from "konva";
-import { useRef, type RefObject, useState } from "react";
+import { useRef, type RefObject, useState, useMemo } from "react";
 import { Layer, Stage, Transformer, Image } from "react-konva";
 import { useCanvasReducer } from "~/hooks/useCanvasReducer";
 import ShapeRenderer from "~/components/shapes/ShapeRenderer";
@@ -137,7 +137,17 @@ export default function CanvasShapesNew() {
     }
   };
 
-  const [mapImage] = useImage(backgroundImageUrl || '');
+  const [mapImage] = useImage(backgroundImageUrl || '', 'anonymous');
+
+  // Get image dimensions - use actual image size for coordinate accuracy
+  const imageDimensions = useMemo(() => {
+    if (!mapImage) return null;
+    
+    return {
+      width: mapImage.width,
+      height: mapImage.height,
+    };
+  }, [mapImage]);
 
   return (
     <div className="flex h-screen">
@@ -151,12 +161,19 @@ export default function CanvasShapesNew() {
           scaleX={zoomLevel}
           scaleY={zoomLevel}
         >
-          <Layer>
-            {mapImage && (
+          <Layer
+            imageSmoothingEnabled={true}
+            imageSmoothingQuality="high"
+          >
+            {mapImage && imageDimensions && (
               <Image
                 image={mapImage}
                 x={0}
                 y={0}
+                width={imageDimensions.width}
+                height={imageDimensions.height}
+                listening={false}
+                imageSmoothingEnabled={true}
               />
             )}
             {/* This renders the created shapes */}
@@ -170,6 +187,7 @@ export default function CanvasShapesNew() {
                 onShapeUpdate={(updates) => handleShapeUpdate(shape.id, updates)}
                 // onTransformEnd={(e) => handleTransformEnd(shape.id, e)}
                 onRestartTransformer={restartTransformer}
+                zoomLevel={zoomLevel}
               />
             ))}
 

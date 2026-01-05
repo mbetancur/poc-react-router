@@ -60,7 +60,11 @@ const LinePolygonShape = ({
 
   const handleExtraPoint = (e: Konva.KonvaEventObject<MouseEvent>) => {
     if (onShapeUpdate && e.type === 'dblclick' && e.evt.ctrlKey === true) {
-      const newPoint = { x: e.evt.x, y: e.evt.y };
+      const stage = e.target.getStage();
+      const pos = stage?.getRelativePointerPosition();
+      if (!pos) return;
+      
+      const newPoint = { x: pos.x, y: pos.y };
       const tempPoints = [...shape.points];
 
       const result = getTwoClosestPoints(tempPoints, newPoint);

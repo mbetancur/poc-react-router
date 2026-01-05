@@ -15,6 +15,7 @@ interface ShapeRendererProps {
   onTransformEnd?: (e: Konva.KonvaEventObject<Event>) => void;
   onShapeUpdate?: (updates: Partial<ShapeModel>) => void;
   onRestartTransformer?: (selectedShapeRef: RefObject<Konva.Shape>) => void;
+  zoomLevel?: number;
 }
 
 const ShapeRenderer = ({
@@ -26,6 +27,7 @@ const ShapeRenderer = ({
   onTransformEnd,
   onShapeUpdate,
   onRestartTransformer,
+  zoomLevel = 1,
 }: ShapeRendererProps) => {
 
   const shapeRef = useRef<Konva.Line | null>(null);
@@ -34,7 +36,7 @@ const ShapeRenderer = ({
     if (!onShapeUpdate) return;
 
     const node = e.target as Konva.Shape;
-    const transform = node._getAbsoluteTransform();
+    const transform = node.getTransform();
 
     // TODO add bcurve support
     if (shape.type === DRAWING_MODES.QCURVE) {
