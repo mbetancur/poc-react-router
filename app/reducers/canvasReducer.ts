@@ -1,6 +1,6 @@
-import type { CanvasState, ShapeModel } from "~/types/canvas";
+import type { CanvasState, ShapeModel, QCurveShapeModel } from "~/types/canvas";
 import type { CanvasAction } from "./canvasActions";
-import { createShapeByType, calculateQCurveControlPoints, isShapeComplete, shouldSnapToStart } from "~/utils/shapeFactory";
+import { createShapeByType, createShapeFromPoints, calculateQCurveControlPoints, isShapeComplete, shouldSnapToStart } from "~/utils/shapeFactory";
 import { DRAWING_MODES, DIRECTIONS, DUPLICATE_OFFSET } from "~/constants/canvas";
 import type { Point } from "~/types/canvas";
 import {
@@ -14,6 +14,7 @@ import {
   DuplicateShapePayloadSchema,
   SetDrawingModePayloadSchema,
   UpdateMousePosPayloadSchema,
+  CreateShapeFromDetectionPayloadSchema,
 } from "~/schemas/canvas.schemas";
 
 export const initialCanvasState: CanvasState = {
@@ -171,7 +172,7 @@ export const canvasReducer = (state: CanvasState, action: CanvasAction): CanvasS
 
       // TODO Consider removing this due Completion of curves is done manually
       // or extend this method to complete all kind of shapes
-      if ((shape.type === DRAWING_MODES.QCURVE || shape.type === DRAWING_MODES.BCURVE) && shape.points.length >= 3) {
+      if ((shape.type === DRAWING_MODES.QCURVE || shape.type === DRAWING_MODES.BCURVE) && shape.points.length >= 3) { 
         const updatedShape: ShapeModel = {
           ...shape,
           modified: Date.now(),
@@ -222,15 +223,31 @@ export const canvasReducer = (state: CanvasState, action: CanvasAction): CanvasS
         return state;
       }
 
-      if (existingShape.type === DRAWING_MODES.QCURVE && updates?.points) {
-        updates.controlPoints = calculateQCurveControlPoints(updates?.points);
-      }
+      let updatedShape: ShapeModel;
 
-      const updatedShape: ShapeModel = {
-        ...existingShape,
-        ...updates,
-        modified: Date.now(),
-      };
+      if (existingShape.type === DRAWING_MODES.QCURVE) {
+        const qCurveUpdates = updates as Partial<QCurveShapeModel>;
+        if (qCurveUpdates.points) {
+          updatedShape = {
+            ...existingShape,
+            ...qCurveUpdates,
+            controlPoints: calculateQCurveControlPoints(qCurveUpdates.points),
+            modified: Date.now(),
+          } as QCurveShapeModel;
+        } else {
+          updatedShape = {
+            ...existingShape,
+            ...qCurveUpdates,
+            modified: Date.now(),
+          } as ShapeModel;
+        }
+      } else {
+        updatedShape = {
+          ...existingShape,
+          ...updates,
+          modified: Date.now(),
+        } as ShapeModel;
+      }
 
 
       return {
@@ -372,6 +389,20 @@ export const canvasReducer = (state: CanvasState, action: CanvasAction): CanvasS
         ...state,
         shapes: new Map(),
         selectedShapeId: null,
+        activeDrawingShape: null,
+      };
+    }
+
+    case 'CREATE_DETECTED_SHAPE': {
+      const validatedPayload = CreateShapeFromDetectionPayloadSchema.parse(action.payload);
+      const { points } = validatedPayload;
+
+      const shape = createShapeFromPoints(points);
+
+      return {
+        ...state,
+        shapes: new Map(state.shapes).set(shape.id, shape),
+        selectedShapeId: shape.id,
         activeDrawingShape: null,
       };
     }

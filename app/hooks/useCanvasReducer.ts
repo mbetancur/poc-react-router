@@ -76,6 +76,10 @@ export const useCanvasReducer = () => {
     dispatch(canvasActions.clearCanvas());
   }, [state.shapes.size]);
 
+  const createShapeFromDetection = useCallback((points: Point[]) => {
+    dispatch(canvasActions.createShapeFromDetection(points));
+  }, []);
+
   const allShapes = Array.from(state.shapes.values());
   const selectedShape = state.selectedShapeId ? state.shapes.get(state.selectedShapeId) : null;
   const isDrawing = state.activeDrawingShape !== null;
@@ -99,5 +103,6 @@ export const useCanvasReducer = () => {
     setDrawingMode,
     updateMousePos,
     clearCanvas,
+    createShapeFromDetection,
   };
 }; 

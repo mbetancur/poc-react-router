@@ -7,9 +7,10 @@ interface ShapePanelProps {
   onChangeShapePosition: (shape: ShapeModel, direction: Direction) => void;
   onDuplicateShape: (shapeId: string) => void;
   onDeleteShape: (shapeId: string) => void;
+  onDetectionModeClick?: () => void;
 }
 
-const ShapesPanel = ({ shapes, onChangeShapePosition, onDuplicateShape, onDeleteShape }: ShapePanelProps) => {
+const ShapesPanel = ({ shapes, onChangeShapePosition, onDuplicateShape, onDeleteShape, onDetectionModeClick }: ShapePanelProps) => {
   return (
     <>
       <table>

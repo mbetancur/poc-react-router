@@ -47,7 +47,7 @@ export const calculateQCurveControlPoints = (points: Point[]): Point[] => {
 export const createQCurveShape = (firstPoint: Point): QCurveShapeModel => {
   // Validate input point
   const validatedPoint = PointSchema.parse(firstPoint);
-  
+
   const shape = {
     id: generateShapeId(),
     type: DRAWING_MODES.QCURVE,
@@ -58,7 +58,7 @@ export const createQCurveShape = (firstPoint: Point): QCurveShapeModel => {
     modified: Date.now(),
     ...getDefaultShapeStyles(),
   };
-  
+
   // Validate the created shape
   return QCurveShapeModelSchema.parse(shape);
 };
@@ -66,7 +66,7 @@ export const createQCurveShape = (firstPoint: Point): QCurveShapeModel => {
 export const createBCurveShape = (firstPoint: Point): BCurveShapeModel => {
   // Validate input point
   const validatedPoint = PointSchema.parse(firstPoint);
-  
+
   const shape = {
     id: generateShapeId(),
     type: DRAWING_MODES.BCURVE,
@@ -78,7 +78,7 @@ export const createBCurveShape = (firstPoint: Point): BCurveShapeModel => {
     modified: Date.now(),
     ...getDefaultShapeStyles(),
   };
-  
+
   // Validate the created shape
   return BCurveShapeModelSchema.parse(shape);
 };
@@ -95,7 +95,7 @@ const createPolygonPoints = (startPoint: Point, distance: number = 100): Point[]
 export const createLinePolygonShape = (startPoint: Point): LinePolygonShapeModel => {
   // Validate input point
   const validatedPoint = PointSchema.parse(startPoint);
-  
+
   const shape = {
     id: generateShapeId(),
     type: DRAWING_MODES.LINEPOLYGON,
@@ -107,7 +107,7 @@ export const createLinePolygonShape = (startPoint: Point): LinePolygonShapeModel
     x: validatedPoint.x,
     y: validatedPoint.y,
   };
-  
+
   // Validate the created shape
   return LinePolygonShapeModelSchema.parse(shape);
 };
@@ -124,6 +124,27 @@ export const createShapeByType = (shapeType: ShapeType, point: Point): ShapeMode
     default:
       throw new Error(`Unknown shape type: ${shapeType}`);
   }
+};
+
+// TODO Validate if we want to extend this detection to other shapes types
+export const createShapeFromPoints = (points: Point[]): ShapeModel => {
+  if (points.length < 3) {
+    throw new Error(`At least 3 points are required to create a shape, got ${points.length}`);
+  }
+
+  const validatedPoints = points.map(p => PointSchema.parse(p));
+  // We create QCURVE shapes by default
+  const baseShape = createShapeByType(DRAWING_MODES.QCURVE, validatedPoints[0]);
+  const baseQCurveShape = baseShape as QCurveShapeModel;
+
+  const updatedShape: QCurveShapeModel = {
+    ...baseQCurveShape,
+    points: validatedPoints,
+    controlPoints: calculateQCurveControlPoints(validatedPoints),
+    modified: Date.now(),
+  };
+
+  return QCurveShapeModelSchema.parse(updatedShape);
 };
 
 export const isShapeComplete = (shape: ShapeModel): boolean => {
@@ -154,10 +175,10 @@ export const shouldSnapToStart = (
 export const constrainToCardinalDirections = (currentPoint: Point, referencePoint: Point): Point => {
   const dx = currentPoint.x - referencePoint.x;
   const dy = currentPoint.y - referencePoint.y;
-  
+
   const absDx = Math.abs(dx);
   const absDy = Math.abs(dy);
-  
+
   if (absDx > absDy) {
     return {
       x: currentPoint.x,

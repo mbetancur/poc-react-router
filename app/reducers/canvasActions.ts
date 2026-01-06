@@ -100,6 +100,13 @@ export interface ClearCanvasAction {
   type: 'CLEAR_CANVAS';
 }
 
+export interface CreateShapeFromDetectionAction {
+  type: 'CREATE_DETECTED_SHAPE';
+  payload: {
+    points: Point[];
+  };
+}
+
 export type CanvasAction =
   | StartDrawingAction
   | AddPointAction
@@ -114,7 +121,8 @@ export type CanvasAction =
   | DuplicateShapeAction
   | SetDrawingModeAction
   | UpdateMousePosAction
-  | ClearCanvasAction;
+  | ClearCanvasAction
+  | CreateShapeFromDetectionAction;
 
 export const canvasActions = {
   startDrawing: (shapeType: ShapeType, point: Point): StartDrawingAction => ({
@@ -181,5 +189,10 @@ export const canvasActions = {
 
   clearCanvas: (): ClearCanvasAction => ({
     type: 'CLEAR_CANVAS'
+  }),
+
+  createShapeFromDetection: (points: Point[]): CreateShapeFromDetectionAction => ({
+    type: 'CREATE_DETECTED_SHAPE',
+    payload: { points }
   })
 }; 

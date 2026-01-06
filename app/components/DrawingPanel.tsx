@@ -18,6 +18,7 @@ const DrawingPanel = ({
     // // TODO: This is not implemented yet, but it's in the code so it's here for reference
     // { mode: DRAWING_MODES.BCURVE as DrawingMode, label: 'B-Curve' }, 
     { mode: DRAWING_MODES.LINEPOLYGON as DrawingMode, label: 'Polygon' },
+    { mode: DRAWING_MODES.DETECTION as DrawingMode, label: 'Detection' },
   ];
 
   return (

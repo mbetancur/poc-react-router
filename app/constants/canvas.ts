@@ -3,6 +3,7 @@ export const DRAWING_MODES = {
   QCURVE: 'qcurve',
   BCURVE: 'bcurve',
   LINEPOLYGON: 'linepolygon',
+  DETECTION: 'detection',
 } as const;
 
 export const DIRECTIONS = {

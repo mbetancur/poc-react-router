@@ -20,6 +20,7 @@ export const DrawingModeSchema = z.enum([
   DRAWING_MODES.QCURVE,
   DRAWING_MODES.BCURVE,
   DRAWING_MODES.LINEPOLYGON,
+  DRAWING_MODES.DETECTION,
 ]);
 
 // Direction schema
@@ -136,6 +137,10 @@ export const SetDrawingModePayloadSchema = z.object({
 
 export const UpdateMousePosPayloadSchema = z.object({
   pos: PointSchema.nullable(),
+});
+
+export const CreateShapeFromDetectionPayloadSchema = z.object({
+  points: z.array(PointSchema).min(3),
 });
 
 // Shape array schema (for import/export)

@@ -12,6 +12,7 @@ import { shouldSnapToStart, constrainToCardinalDirections } from "~/utils/shapeF
 import useImage from "use-image";
 import ShapesPanel from "~/components/ShapesPanel";
 import { DRAWING_MODES, CANVAS_WIDTH, CANVAS_HEIGHT, MIN_TRANSFORM_SIZE, TRANSFORMER_PADDING } from "~/constants/canvas";
+import { detectShape } from "~/utils/detectionService";
 
 export default function CanvasShapesNew() {
   const {
@@ -32,12 +33,14 @@ export default function CanvasShapesNew() {
     transformShape,
     updateMousePos,
     updateShape,
+    createShapeFromDetection,
   } = useCanvasReducer();
 
   const transformerRef = useRef<Konva.Transformer>(null);
   const backgroundLayerRef = useRef<Konva.Layer>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [backgroundImageUrl, setBackgroundImageUrl] = useState<string | null>(null);
+  const [isDetecting, setIsDetecting] = useState(false);
 
   const handleZoomIn = () => {
     setZoomLevel((prev) => Math.min(prev + 0.1, 5));
@@ -47,13 +50,31 @@ export default function CanvasShapesNew() {
     setZoomLevel((prev) => Math.max(prev - 0.1, 0.1));
   };
 
-  const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
+  const handleMouseDown = async (e: Konva.KonvaEventObject<MouseEvent>) => {
     const pos = e?.target?.getStage()?.getRelativePointerPosition();
     if (!pos) return;
 
     let point: Point = { x: pos.x, y: pos.y };
 
     if (state.drawingMode === DRAWING_MODES.SELECT) return;
+
+    // TODO split into diff responsabilities eg: 1.Handle detection mode
+    if (state.drawingMode === DRAWING_MODES.DETECTION) {
+      if (isDetecting) return;
+
+      setIsDetecting(true);
+      try {
+        const detectedPoints = await detectShape(point.x, point.y);
+        // adding first point at the end to complete the shape
+        detectedPoints.push(detectedPoints[0])
+        createShapeFromDetection(detectedPoints);
+      } catch (error) {
+        console.error('Detection failed:', error);
+      } finally {
+        setIsDetecting(false);
+      }
+      return;
+    }
 
     if (isDrawing && state.activeDrawingShape) {
       const activeShape = state.activeDrawingShape;
@@ -256,6 +277,7 @@ export default function CanvasShapesNew() {
           onChangeShapePosition={changeShapePos}
           onDuplicateShape={duplicateShape}
           onDeleteShape={deleteShape}
+          onDetectionModeClick={() => setDrawingMode(DRAWING_MODES.DETECTION)}
         />
         {process.env.NODE_ENV === 'development' && import.meta.env.VITE_DISPLAY_DEV_INFO === "activate" && (
           <DevInfo
