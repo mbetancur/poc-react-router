@@ -1,5 +1,5 @@
 import type Konva from "konva";
-import { useRef, type RefObject, useState, useMemo } from "react";
+import { useRef, type RefObject, useState, useMemo, useEffect } from "react";
 import { Layer, Stage, Transformer, Image } from "react-konva";
 import { useCanvasReducer } from "~/hooks/useCanvasReducer";
 import ShapeRenderer from "~/components/shapes/ShapeRenderer";
@@ -35,6 +35,7 @@ export default function CanvasShapesNew() {
   } = useCanvasReducer();
 
   const transformerRef = useRef<Konva.Transformer>(null);
+  const backgroundLayerRef = useRef<Konva.Layer>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [backgroundImageUrl, setBackgroundImageUrl] = useState<string | null>(null);
 
@@ -139,15 +140,26 @@ export default function CanvasShapesNew() {
 
   const [mapImage] = useImage(backgroundImageUrl || '', 'anonymous');
 
-  // Get image dimensions - use actual image size for coordinate accuracy
   const imageDimensions = useMemo(() => {
     if (!mapImage) return null;
-    
+
     return {
       width: mapImage.width,
       height: mapImage.height,
     };
   }, [mapImage]);
+
+  // Cache the background layer when image changes for better performance
+  useEffect(() => {
+    if (backgroundLayerRef.current && mapImage && imageDimensions) {
+      backgroundLayerRef.current.cache({
+        x: 0,
+        y: 0,
+        width: imageDimensions.width,
+        height: imageDimensions.height,
+      });
+    }
+  }, [mapImage, imageDimensions]);
 
   return (
     <div className="flex h-screen">
@@ -162,8 +174,10 @@ export default function CanvasShapesNew() {
           scaleY={zoomLevel}
         >
           <Layer
+            ref={backgroundLayerRef}
             imageSmoothingEnabled={true}
             imageSmoothingQuality="high"
+            listening={false}
           >
             {mapImage && imageDimensions && (
               <Image
@@ -176,6 +190,12 @@ export default function CanvasShapesNew() {
                 imageSmoothingEnabled={true}
               />
             )}
+          </Layer>
+
+          <Layer
+            imageSmoothingEnabled={true}
+            imageSmoothingQuality="high"
+          >
             {/* This renders the created shapes */}
             {allShapes.map((shape) => (
               <ShapeRenderer
@@ -191,7 +211,7 @@ export default function CanvasShapesNew() {
               />
             ))}
 
-            {/* This renders the current drawing shape */}
+            {/* This renders the current in progress drawing shape */}
             {isDrawing && state.activeDrawingShape && (
               <ShapeRenderer
                 shape={state.activeDrawingShape}
