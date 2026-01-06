@@ -76,7 +76,7 @@ const QCurveShape = ({
       const stage = e.target.getStage();
       const pos = stage?.getRelativePointerPosition();
       if (!pos) return;
-      
+
       const newPoint = { x: pos.x, y: pos.y };
       const tempPoints = [...shape.points];
 
@@ -214,9 +214,10 @@ const QCurveShape = ({
     if (ref?.current) {
       ref.current.getSelfRect = () => shapeBounds;
     }
-    onRestartTransformer?.(ref as RefObject<Konva.Shape>);
-
-  }, [shapeBounds, ref, onRestartTransformer]);
+    if (isSelected && onRestartTransformer) {
+      onRestartTransformer(ref as RefObject<Konva.Shape>);
+    }
+  }, [shapeBounds, ref, onRestartTransformer, isSelected]);
 
   return (
     <Group {...rest}>
